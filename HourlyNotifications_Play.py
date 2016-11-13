@@ -36,7 +36,10 @@ class Sound:
             file_name = sounds[hour]
             file = Directory.get_file_path(folder, file_name)
             audio = pyglet.media.load(file)
-            audio.play()
+            player = pyglet.media.Player()
+            player.queue(audio)
+            player.volume = cls.volume
+            player.play()
             return True
         except FileNotFoundError:
             return False
