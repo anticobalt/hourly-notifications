@@ -115,8 +115,8 @@ class Interface:
         Create popup box that lets user change volume percentage
         :return: NoneType
         """
-        new_volume = simpledialog.askinteger("Notification Volume", "Set New Volume (Max. 100%)", parent=self.root,
-                                              initialvalue=self.volume, maxvalue=100)
+        new_volume = simpledialog.askinteger("Notification Volume", "Set New Volume (1% to 100%)", parent=self.root,
+                                              initialvalue=self.volume, minvalue=1, maxvalue=100)
         if new_volume:  # if user didn't cancel
             self.volume = new_volume
             Sound.set_volume(self.volume / 100)
