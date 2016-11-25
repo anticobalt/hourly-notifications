@@ -1,5 +1,7 @@
 # hourly-notifications
 
+![Screenshot](https://vgy.me/ll8vDd.png)
+
 ### Features
 - Set audio notifications to play any hour of the day, on the hour
 - Play notifications as required, so long as the program is running
