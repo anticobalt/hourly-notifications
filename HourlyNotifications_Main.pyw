@@ -11,7 +11,7 @@ def main():
     gui = Interface()
     sounds = Directory.get_sounds()
     if not sounds:
-        gui.alert_missing()
+        gui.warning("Sound files not located. Program will exit.", close=True)
     try:
         saved_choices, saved_volume = Directory.get_settings(graphics=True)
         gui.set_saved_volume(saved_volume)
@@ -21,7 +21,6 @@ def main():
         gui.draw_topbar()
         gui.create_selections(sounds, saved_choices)
         gui.run()
-    
     
 
 class Interface:
@@ -34,6 +33,7 @@ class Interface:
         self.row_count = 4
         self.topbar = Menu(self.root)
         self.volume = 20
+        self.error_handled = []
 
     def draw_topbar(self):
         """
@@ -76,13 +76,23 @@ class Interface:
         Directory.save_settings(selection_values, default, self.volume)
         messagebox.showinfo("Notice", "Settings saved.")
 
-    def alert_missing(self):
+    def warning(self, error, close=False, play_error=False):
         """
-        Popup warning for missing audio
+        Generalized popup warning
+        :param error: str or tuple
+        :param close: bool
+        :param play_error: bool
         :return: NoneType
         """
-        messagebox.showwarning("Error", "Sound files not located. Program will exit.")
-        self.root.destroy()
+        if play_error:
+            self.error_handled.append(error[0])
+            if error[1] == UnicodeEncodeError:
+                error = "Audio file name contains invalid characters. Rename this hour's file to solve the problem."
+            elif error[1] == FileNotFoundError:
+                error = error[0] + " does not exist."
+        messagebox.showwarning("Error", error)
+        if close:
+            self.root.destroy()
 
     def run(self):
         """
@@ -96,10 +106,13 @@ class Interface:
 
     def run_script(self):
         """
-        Uses Sound to check if it is time to play notification
+        Uses Sound to check if it is time to play notification, and check for errors
         :return:
         """
         Sound.decide_play()
+        error = Sound.get_warning_request()
+        if error and (error[0] not in self.error_handled):
+            self.warning(error, play_error=True)
         self.root.after(10000, self.run_script)
 
     def set_saved_volume(self, volume):

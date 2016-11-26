@@ -9,6 +9,7 @@ class Sound:
 
     hour_last_played = None
     volume = 765
+    error = None
 
     @classmethod
     def decide_play(cls):
@@ -19,7 +20,7 @@ class Sound:
         system_time = datetime.now().time()
         print(system_time)
         for hour in range(24):
-            if (cls.hour_last_played != hour) and (time(hour, 0) <= system_time <= time(hour, 10)):
+            if (cls.hour_last_played != hour) and (time(hour, 0) <= system_time <= time(hour, 5)):
                 # play sound if sound has not been played in the last hour, and it is the appropriate time
                 if cls.play_sound(hour):
                     cls.hour_last_played = hour
@@ -41,10 +42,12 @@ class Sound:
             player.volume = cls.volume
             player.play()
             return True
-        except FileNotFoundError:
-            return False
         except KeyError:
             return False
+        except UnicodeEncodeError:  # will be raised even if file doesn't exist
+            cls.error = (file, UnicodeEncodeError)
+        except pyglet.media.avbin.AVbinException:
+            cls.error = (file, FileNotFoundError)
 
     @classmethod
     def set_volume(cls, volume):
@@ -53,3 +56,10 @@ class Sound:
         :return: NoneType
         """
         cls.volume = volume
+
+    @classmethod
+    def get_warning_request(cls):
+        """
+        :return: Exception
+        """
+        return cls.error

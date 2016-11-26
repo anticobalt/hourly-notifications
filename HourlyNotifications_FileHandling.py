@@ -18,7 +18,7 @@ class Directory:
         """
 
         # Set initial values
-        file_types = [".ogg"]
+        file_types = ["ogg", "mp3", "flac", "wav"]
         sounds = []
 
         # Scan for a sound folder
