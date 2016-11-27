@@ -11,6 +11,15 @@ class Directory:
     script_name = "HourlyNotifications_Play.py"
 
     @classmethod
+    def get_file_path(cls, folder, file_name):
+        """
+        :param folder: str
+        :param file_name: str
+        :return: str
+        """
+        return os.path.join(folder, file_name)
+
+    @classmethod
     def get_sounds(cls):
         """
         Scan current directory for a sound folder, and scan that sound folder for sound files
@@ -39,7 +48,7 @@ class Directory:
             return None
 
     @classmethod
-    def save_settings(cls, values, default, volume):
+    def save_sound_settings(cls, values, default, volume):
         """
         Verify sound values, and save by object serialization
         :param values: list
@@ -59,19 +68,29 @@ class Directory:
 
         # write to save file
         data = (cls.sound_folder, sounds, volume)
-        location = os.path.join(cls.current_folder, "settings.pkl")
+        location = os.path.join(cls.current_folder, "soundsettings.pkl")
         f = open(location, "wb")
         pickle.dump(data, f)
 
     @classmethod
-    def get_settings(cls, graphics=True):
+    def save_time_settings(cls, minute):
+        """
+        :param minute: int
+        :return: NoneType
+        """
+        location = os.path.join(cls.current_folder, "timesettings.pkl")
+        f = open(location, "wb")
+        pickle.dump(minute, f)
+
+    @classmethod
+    def get_sound_settings(cls, graphics=True):
         """
         Load from save file by object deserialization
         :param graphics: bool
         :return: tuple or error
         """
 
-        location = os.path.join(cls.current_folder, "settings.pkl")
+        location = os.path.join(cls.current_folder, "soundsettings.pkl")
         try:
             f = open(location, "rb")
             folder, sounds, volume = pickle.load(f)
@@ -84,10 +103,15 @@ class Directory:
             raise
 
     @classmethod
-    def get_file_path(cls, folder, file_name):
+    def get_time_settings(cls):
         """
-        :param folder: str
-        :param file_name: str
-        :return: str
+        Try to load save file; if failed, return defaults
+        :return: int
         """
-        return os.path.join(folder, file_name)
+
+        location = os.path.join(cls.current_folder, "timesettings.pkl")
+        try:
+            f = open(location, "rb")
+            return pickle.load(f)
+        except FileNotFoundError:
+            return 0

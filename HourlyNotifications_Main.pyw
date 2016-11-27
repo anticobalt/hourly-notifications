@@ -7,19 +7,23 @@ from HourlyNotifications_Play import Sound
 
 
 def main():
-
+    """
+    Create gui from saved settings or default settings
+    :return:
+    """
     gui = Interface()
     sounds = Directory.get_sounds()
     if not sounds:
         gui.warning("Sound files not located. Program will exit.", close=True)
     try:
-        saved_choices, saved_volume = Directory.get_settings(graphics=True)
+        saved_choices, saved_volume = Directory.get_sound_settings(graphics=True)
         gui.set_saved_volume(saved_volume)
-    except:
+    except FileNotFoundError:
         saved_choices = None
     finally:
+        minute = str(Directory.get_time_settings()).zfill(2)
         gui.draw_topbar()
-        gui.create_selections(sounds, saved_choices)
+        gui.create_selections(minute, sounds, saved_choices)
         gui.run()
     
 
@@ -34,6 +38,7 @@ class Interface:
         self.topbar = Menu(self.root)
         self.volume = 20
         self.error_handled = []
+        self.minute = "00"
 
     def draw_topbar(self):
         """
@@ -42,57 +47,30 @@ class Interface:
         """
         settings = Menu(self.topbar, tearoff=0)
         settings.add_command(label="Set Volume", command=self.ask_new_volume)
+        settings.add_command(label="Set Minute of the Hour", command=self.ask_new_minute)
         settings.add_command(label="Exit", command=self.root.destroy)
         self.topbar.add_cascade(label="Advanced Settings", menu=settings)
         self.topbar.add_command(label="Save", command=self.save)
         self.root.config(menu=self.topbar)
 
-    def create_selections(self, sounds, saved_choices):
+    def create_selections(self, minute, sounds, saved_choices):
         """
         Increment through rows, columns, and hours to create Selections
+        :param minute: str
         :param sounds: list
         :param saved_choices: dict
         :return: NoneType
         """
         hour = 0
+        self.minute = minute
         for c in range(self.column_count):
             for r in range(self.row_count):
                 try:
-                    box = Selection(self.root, c, r, hour, sounds, saved_choice=saved_choices[hour])
+                    box = Selection(self.root, c, r, hour, self.minute, sounds, saved_choice=saved_choices[hour])
                 except:
-                    box = Selection(self.root, c, r, hour, sounds)
+                    box = Selection(self.root, c, r, hour, self.minute, sounds)
                 hour += 1
                 self.selections.append(box)
-    
-    def save(self):
-        """
-        Get user choices, save using Directory, and notify the user save was successful
-        :return: NoneType
-        """
-        selection_values = []
-        for selection in self.selections:
-            selection_values.append(selection.get_choice())
-        default = Selection.get_default_choice()
-        Directory.save_settings(selection_values, default, self.volume)
-        messagebox.showinfo("Notice", "Settings saved.")
-
-    def warning(self, error, close=False, play_error=False):
-        """
-        Generalized popup warning
-        :param error: str or tuple
-        :param close: bool
-        :param play_error: bool
-        :return: NoneType
-        """
-        if play_error:
-            self.error_handled.append(error[0])
-            if error[1] == UnicodeEncodeError:
-                error = "Audio file name contains invalid characters. Rename this hour's file to solve the problem."
-            elif error[1] == FileNotFoundError:
-                error = error[0] + " does not exist."
-        messagebox.showwarning("Error", error)
-        if close:
-            self.root.destroy()
 
     def run(self):
         """
@@ -117,7 +95,7 @@ class Interface:
 
     def set_saved_volume(self, volume):
         """
-        Allows user to see what the volume is currently set to
+        Allow user to see what the volume is currently set to
         :param volume: int
         :return: NoneType
         """
@@ -135,6 +113,51 @@ class Interface:
             Sound.set_volume(self.volume / 100)
             self.save()
 
+    def ask_new_minute(self):
+        """
+        Create popup box that lets user change what minute every hour notification plays
+        :return: NoneType
+        """
+        new_minute = simpledialog.askinteger("Playback Time", "Set New Minute of the Hour", parent=self.root,
+                                              initialvalue=self.minute, minvalue=0, maxvalue=59)
+        if new_minute in range(60):  # if user didn't cancel
+            self.minute = str(new_minute).zfill(2)
+            Sound.set_minute(new_minute)
+            for box in self.selections:
+                box.set_minute(self.minute)
+            self.save()
+
+    def save(self):
+        """
+        Get user choices, save using Directory, and notify the user save was successful
+        :return: NoneType
+        """
+        selection_values = []
+        for selection in self.selections:
+            selection_values.append(selection.get_choice())
+        default = Selection.get_default_choice()
+        Directory.save_sound_settings(selection_values, default, self.volume)
+        Directory.save_time_settings(self.minute)
+        messagebox.showinfo("Notice", "Settings saved.")
+
+    def warning(self, error, close=False, play_error=False):
+        """
+        Generalized popup warning
+        :param error: str or tuple
+        :param close: bool
+        :param play_error: bool
+        :return: NoneType
+        """
+        if play_error:
+            self.error_handled.append(error[0])
+            if error[1] == UnicodeEncodeError:
+                error = "Audio file name contains invalid characters. Rename this hour's file to solve the problem."
+            elif error[1] == FileNotFoundError:
+                error = error[0] + " does not exist."
+        messagebox.showwarning("Error", error)
+        if close:
+            self.root.destroy()
+
 
 class Selection:
 
@@ -150,7 +173,7 @@ class Selection:
         """
         return cls.default_choice
 
-    def __init__(self, root, c, r, hour, sounds, saved_choice=None):
+    def __init__(self, root, c, r, hour, minute, sounds, saved_choice=None):
         """
         :param root: Tk
         :param c: int
@@ -161,6 +184,7 @@ class Selection:
         """
         self.root = root
         self.hour = hour
+        self.minute = minute
         self.c = c
         self.r = r
         self.saved_choice = saved_choice
@@ -180,7 +204,7 @@ class Selection:
         :return: NoneType
         """
         self.label.tag_config('center', justify=CENTER)  # creates a tag with name 'center' that can center text
-        self.label.insert(END, "Sound for " + str(self.hour) + ":00", 'center')
+        self.label.insert(END, "Sound for " + str(self.hour) + ":" + self.minute, 'center')
 
         # Each row of Selection objects actually has two subrows; Tkinter uses these subrows to draw
         self.label.grid(row=self.r * 2, column=self.c,
@@ -204,5 +228,13 @@ class Selection:
         """
         return self.choice.get()
 
+    def set_minute(self, minute):
+        """
+        :param minute: str
+        :return: NoneType
+        """
+        self.minute = minute
+        self.label.delete(1.0, END)
+        self.label.insert(END, "Sound for " + str(self.hour) + ":" + self.minute, 'center')
 
 main()
