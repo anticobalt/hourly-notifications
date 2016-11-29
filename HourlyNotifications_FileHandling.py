@@ -69,8 +69,8 @@ class Directory:
         # write to save file
         data = (cls.sound_folder, sounds, volume)
         location = os.path.join(cls.current_folder, "soundsettings.pkl")
-        f = open(location, "wb")
-        pickle.dump(data, f)
+        with open(location, "wb") as f:
+            pickle.dump(data, f)
 
     @classmethod
     def save_time_settings(cls, minute):
@@ -79,8 +79,8 @@ class Directory:
         :return: NoneType
         """
         location = os.path.join(cls.current_folder, "timesettings.pkl")
-        f = open(location, "wb")
-        pickle.dump(minute, f)
+        with open(location, "wb") as f:
+            pickle.dump(minute, f)
 
     @classmethod
     def get_sound_settings(cls, graphics=True):
@@ -92,8 +92,8 @@ class Directory:
 
         location = os.path.join(cls.current_folder, "soundsettings.pkl")
         try:
-            f = open(location, "rb")
-            folder, sounds, volume = pickle.load(f)
+            with open(location, "rb") as f:
+                folder, sounds, volume = pickle.load(f)
             if graphics:
                 return sounds, int(volume * 100)
             else:
@@ -111,7 +111,7 @@ class Directory:
 
         location = os.path.join(cls.current_folder, "timesettings.pkl")
         try:
-            f = open(location, "rb")
-            return pickle.load(f)
+            with open(location, "rb") as f:
+                return pickle.load(f)
         except FileNotFoundError:
             return 0
