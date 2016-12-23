@@ -3,8 +3,6 @@
 from tkinter import *
 from tkinter import messagebox, simpledialog
 from HourlyNotifications_FileHandling import Directory
-from HourlyNotifications_Play import Sound
-
 
 def main():
     """
@@ -13,18 +11,19 @@ def main():
     """
     gui = Interface()
     sounds = Directory.get_sounds()
+
     if not sounds:
         gui.warning("Sound files not located. Program will exit.", close=True)
     try:
-        saved_choices, saved_volume = Directory.get_sound_settings(graphics=True)
+        saved_choices, saved_volume, minute = Directory.get_settings(gui=True)
         gui.set_saved_volume(saved_volume)
+        gui.set_saved_minute(str(Directory.get_settings()[3]).zfill(2))
     except FileNotFoundError:
         saved_choices = None
-    finally:
-        minute = str(Directory.get_time_settings()).zfill(2)
-        gui.draw_topbar()
-        gui.create_selections(minute, sounds, saved_choices)
-        gui.run()
+
+    gui.draw_topbar()
+    gui.create_selections(sounds, saved_choices)
+    gui.run()
     
 
 class Interface:
@@ -46,14 +45,18 @@ class Interface:
         :return: NoneType
         """
         settings = Menu(self.topbar, tearoff=0)
+        debug = Menu(self.topbar, tearoff=0)
         settings.add_command(label="Set Volume", command=self.ask_new_volume)
         settings.add_command(label="Set Minute of the Hour", command=self.ask_new_minute)
-        settings.add_command(label="Exit", command=self.root.destroy)
-        self.topbar.add_cascade(label="Advanced Settings", menu=settings)
+        debug.add_command(label="Check for Playback Errors", command=self.check_errors)
+
+        self.topbar.add_cascade(label="Preferences", menu=settings)
+        self.topbar.add_cascade(label="Debugging", menu=debug)
         self.topbar.add_command(label="Save", command=self.save)
+        self.topbar.add_command(label="Toggle Notifications", command=self.toggle_playback)
         self.root.config(menu=self.topbar)
 
-    def create_selections(self, minute, sounds, saved_choices):
+    def create_selections(self, sounds, saved_choices):
         """
         Increment through rows, columns, and hours to create Selections
         :param minute: str
@@ -62,7 +65,6 @@ class Interface:
         :return: NoneType
         """
         hour = 0
-        self.minute = minute
         for c in range(self.column_count):
             for r in range(self.row_count):
                 try:
@@ -74,32 +76,38 @@ class Interface:
 
     def run(self):
         """
-        Main program loops
+        Main program loop
         :return: NoneType
         """
         self.root.resizable(width=False, height=False)
-        self.root.after(1000, self.run_script)
-        self.root.protocol("WM_DELETE_WINDOW", self.root.iconify)
         self.root.mainloop()
 
-    def run_script(self):
+    def check_errors(self):
         """
-        Uses Sound to check if it is time to play notification, and check for errors
-        :return:
+        Uses Sound to check for playback errors
+        :return: NoneType
         """
-        Sound.decide_play()
-        error = Sound.get_warning_request()
+        error = Directory.get_error()
         if error and (error[0] not in self.error_handled):
-            self.warning(error, play_error=True)
-        self.root.after(10000, self.run_script)
+            self.warning(error, playback_error=True)
+        else:
+            self.warning("No new playback errors found.")
+            Directory.save_error(None)
 
     def set_saved_volume(self, volume):
         """
-        Allow user to see what the volume is currently set to
+        Allows user to see what the volume is currently set to
         :param volume: int
         :return: NoneType
         """
         self.volume = volume
+
+    def set_saved_minute(self, minute):
+        """
+        :param minute: Str
+        :return: NoneType
+        """
+        self.minute = minute
 
     def ask_new_volume(self):
         """
@@ -110,7 +118,6 @@ class Interface:
                                               initialvalue=self.volume, minvalue=1, maxvalue=100)
         if new_volume:  # if user didn't cancel
             self.volume = new_volume
-            Sound.set_volume(self.volume / 100)
             self.save()
 
     def ask_new_minute(self):
@@ -122,7 +129,6 @@ class Interface:
                                               initialvalue=self.minute, minvalue=0, maxvalue=59)
         if new_minute in range(60):  # if user didn't cancel
             self.minute = str(new_minute).zfill(2)
-            Sound.set_minute(new_minute)
             for box in self.selections:
                 box.set_minute(self.minute)
             self.save()
@@ -136,19 +142,18 @@ class Interface:
         for selection in self.selections:
             selection_values.append(selection.get_choice())
         default = Selection.get_default_choice()
-        Directory.save_sound_settings(selection_values, default, self.volume)
-        Directory.save_time_settings(self.minute)
+        Directory.save_settings(selection_values, default, self.volume, self.minute)
         messagebox.showinfo("Notice", "Settings saved.")
 
-    def warning(self, error, close=False, play_error=False):
+    def warning(self, error, close=False, playback_error=False):
         """
         Generalized popup warning
         :param error: str or tuple
         :param close: bool
-        :param play_error: bool
+        :param playback_error: bool
         :return: NoneType
         """
-        if play_error:
+        if playback_error:
             self.error_handled.append(error[0])
             if error[1] == UnicodeEncodeError:
                 error = "Audio file name contains invalid characters. Rename this hour's file to solve the problem."
@@ -157,6 +162,19 @@ class Interface:
         messagebox.showwarning("Error", error)
         if close:
             self.root.destroy()
+
+    def toggle_playback(self):
+        """
+        Turns playback of notifications on or off
+        :return: NoneType
+        """
+        if Directory.player_off():
+            Directory.set_off(False)
+            message = "Notifications are now ON."
+        else:
+            Directory.set_off(True)
+            message = "Notifications are now OFF."
+        messagebox.showinfo("Playback Status", message)
 
 
 class Selection:

@@ -1,14 +1,16 @@
 # Reads and writes to files and folders
 
-import os
-import pickle
+import os, pickle, subprocess
 
 
 class Directory:
 
     current_folder = os.path.dirname(os.path.realpath(__file__))
     sound_folder = None
-    script_name = "HourlyNotifications_Play.py"
+    settings_file = os.path.join(current_folder, "settings.pkl")
+    log_file = os.path.join(current_folder, "log.pkl")
+    ctrl_file = os.path.join(current_folder, "ctrl.pkl")
+    player_file = os.path.join(current_folder, "HourlyNotifications_Play.py")
 
     @classmethod
     def get_file_path(cls, folder, file_name):
@@ -48,12 +50,13 @@ class Directory:
             return None
 
     @classmethod
-    def save_sound_settings(cls, values, default, volume):
+    def save_settings(cls, values, default, volume, minute):
         """
         Verify sound values, and save by object serialization
         :param values: list
         :param default: str
         :param volume: int
+        :param minute: int
         :return: NoneType
         """
 
@@ -67,51 +70,69 @@ class Directory:
         volume /= 100
 
         # write to save file
-        data = (cls.sound_folder, sounds, volume)
-        location = os.path.join(cls.current_folder, "soundsettings.pkl")
-        with open(location, "wb") as f:
+        data = (cls.sound_folder, sounds, volume, minute)
+        with open(cls.settings_file, "wb") as f:
             pickle.dump(data, f)
 
     @classmethod
-    def save_time_settings(cls, minute):
-        """
-        :param minute: int
-        :return: NoneType
-        """
-        location = os.path.join(cls.current_folder, "timesettings.pkl")
-        with open(location, "wb") as f:
-            pickle.dump(minute, f)
-
-    @classmethod
-    def get_sound_settings(cls, graphics=True):
+    def get_settings(cls, gui=False):
         """
         Load from save file by object deserialization
-        :param graphics: bool
+        :param gui: bool
+        :param time: bool
         :return: tuple or error
         """
 
-        location = os.path.join(cls.current_folder, "soundsettings.pkl")
         try:
-            with open(location, "rb") as f:
-                folder, sounds, volume = pickle.load(f)
-            if graphics:
-                return sounds, int(volume * 100)
+            with open(cls.settings_file, "rb") as f:
+                folder, sounds, volume, minute = pickle.load(f)
+            if gui:
+                return sounds, int(volume * 100), minute
             else:
-                return folder, sounds, volume
+                return folder, sounds, volume, minute
         except FileNotFoundError:
             # reached when save file is incomplete or non-existent
             raise
 
     @classmethod
-    def get_time_settings(cls):
+    def save_error(cls, error):
         """
-        Try to load save file; if failed, return defaults
-        :return: int
+        :param error: Tuple
+        :return: NoneType
         """
+        with open(cls.log_file, "wb") as f:
+            pickle.dump(error, f)
 
-        location = os.path.join(cls.current_folder, "timesettings.pkl")
+    @classmethod
+    def get_error(cls):
+        """
+        :return: Tuple or NoneType
+        """
         try:
-            with open(location, "rb") as f:
+            with open(cls.log_file, "rb") as f:
                 return pickle.load(f)
         except FileNotFoundError:
-            return 0
+            return None
+
+    @classmethod
+    def set_off(cls, off):
+        """
+        :param off: Bool
+        :return: NoneType
+        """
+        with open(cls.ctrl_file, "wb") as f:
+            pickle.dump(off, f)
+        if not off:
+            subprocess.Popen(["python", cls.player_file], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    @classmethod
+    def player_off(cls):
+        """
+        Check if player needs to shut off
+        :return: Bool
+        """
+        try:
+            with open(cls.ctrl_file, "rb") as f:
+                return pickle.load(f)
+        except FileNotFoundError:
+            return False

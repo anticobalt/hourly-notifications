@@ -1,75 +1,65 @@
 # Checks time and plays audio
 
-import pyglet
 from HourlyNotifications_FileHandling import Directory
-from datetime import datetime, time
+import pyglet, os, time
+from datetime import datetime as d, time as t
+
+
+def main():
+    player = Sound()
+    while 1:
+        player.decide_play()
+        for i in range(10):
+            time.sleep(1)
+            if Directory.player_off():
+                break
+        else:  # executed if loop completes
+            continue
+        break  # executed if loop is broken out of
 
 
 class Sound:
 
-    hour_last_played = None
-    volume = 765
-    error = None
-    minute = 0
+    def __init__(self):
+        self.hour_last_played = None
 
-    @classmethod
-    def decide_play(cls):
+    def decide_play(self):
         """
         Checks if it is time to play a sound
         :return: NoneType
         """
-        system_time = datetime.now().time()
-        print(system_time)
-        cls.minute = int(Directory.get_time_settings())
+        system_time = d.now().time()
+        minute = int(Directory.get_settings(gui=False)[3])
         for hour in range(24):
-            if (cls.hour_last_played != hour) and (time(hour, cls.minute) <= system_time <= time(hour, cls.minute+5)):
+            if (self.hour_last_played != hour) and (t(hour, minute) <= system_time <= t(hour, minute+1)):
                 # play sound if sound has not been played in the last hour, and it is the appropriate time
-                if cls.play_sound(hour):
-                    cls.hour_last_played = hour
+                if self.play_sound(hour):
+                    self.hour_last_played = hour
 
-    @classmethod
-    def play_sound(cls, hour):
+    def play_sound(self, hour):
         """
         Tries to play a sound
         :param hour: int
         :return: bool
         """
         try:
-            folder, sounds, cls.volume = Directory.get_sound_settings(graphics=False)
+            folder, sounds, volume, minute = Directory.get_settings(gui=False)
             file_name = sounds[hour]
             file = Directory.get_file_path(folder, file_name)
             audio = pyglet.media.load(file)
             player = pyglet.media.Player()
             player.queue(audio)
-            player.volume = cls.volume
+            player.volume = volume
             player.play()
             return True
         except KeyError:
             return False
-        except UnicodeEncodeError:  # will be raised even if file doesn't exist
-            cls.error = (file, UnicodeEncodeError)
+        except UnicodeEncodeError:  # will be raised even if file doesn't exist to start with
+            error = (file, UnicodeEncodeError)
+            Directory.save_error(error)
         except pyglet.media.avbin.AVbinException:
-            cls.error = (file, FileNotFoundError)
+            error = (file, FileNotFoundError)
+            Directory.save_error(error)
 
-    @classmethod
-    def set_volume(cls, volume):
-        """
-        :param volume: float
-        :return: NoneType
-        """
-        cls.volume = volume
-
-    @classmethod
-    def set_minute(cls, minute):
-        """
-        :param volume: float
-        :return: NoneType
-        """
-        cls.minute = minute
-
-    @classmethod
-    def get_warning_request(cls):
-        """
-        :return: Exception
-        """
-        return cls.error
+if __name__ == "__main__":
+    main()
