@@ -2,6 +2,7 @@
 sound*/
 avbin.dll
 *.pkl
+*.txt
 
 #Pycharm
 .idea/

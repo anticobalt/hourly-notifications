@@ -1,20 +1,23 @@
 # hourly-notifications
 
-![Screenshot](https://vgy.me/ll8vDd.png)
+Written in Python 3.5.1, for Windows.
+
+![Screenshot](https://vgy.me/shUYNW.png)
 
 ### Features
-- Set audio notifications to play any hour of the day, any number of minutes into an hour
-- Play notifications as required, so long as the program is running
-- Use mp3, ogg, flac, or wav files as notifications
-- Set the volume for audio
-- Save choices for notifications and volume level
-- Use GUI to easily choose sound files, set volume, and save settings
+- Sets hourly alarms
+- Plays mp3/ogg/flac/wav files
+- Can change the number of minutes into an hour alarms play at (e.g. quarter past every hour, instead of on the hour)
+- Reports playback errors
+- In-program volume settings
 
-### Requirements
-Python 3.5.1 on Windows with Tkinter, Pyglet, and AVbin. AVbin requires avbin.dll to be in the same folder as the source files. After AVbin is installed, avbin.dll can be found in system32; just copy and paste it into the hourly-notifications folder. A folder named 'sounds' must also be in the hourly-notifications folder: audio in this sound folder can be chosen as notifications.
+### How to Use
+1. Install Tkinter, Pyglet, and AVbin
+2. After AVbin is installed, avbin.dll can be found in system32; copy and paste it into the program's folder
+3. In the program's folder, make a folder named 'sounds'. This new folder should contain sounds you want to use
 
 ### Planned Features (in no particular order of priority)
 - Allow user to choose where audio is stored
 - Quickly set the same notification for multiple hours
-- Minimize program to system tray
-- Open program on Windows startup
+- Setting to open program on Windows startup
+- More basic alarms (e.g. play a sound every 15 minutes)

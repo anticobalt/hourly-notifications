@@ -3,29 +3,31 @@
 import os, pickle, subprocess
 
 
-class Directory:
+class System:
 
-    current_folder = os.path.dirname(os.path.realpath(__file__))
+    CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
+    SETTINGS_FILE = os.path.join(CURRENT_DIR, "settings.pkl")
+    ERROR_FILE = os.path.join(CURRENT_DIR, "error.pkl")
+    SWITCH_FILE = os.path.join(CURRENT_DIR, "ctrl.pkl")
+    LOG_FILE = os.path.join(CURRENT_DIR, "log.txt")
+    PLAYER_SCRIPT = os.path.join(CURRENT_DIR, "HourlyNotifications_Play.pyw")
+
     sound_folder = None
-    settings_file = os.path.join(current_folder, "settings.pkl")
-    log_file = os.path.join(current_folder, "log.pkl")
-    ctrl_file = os.path.join(current_folder, "ctrl.pkl")
-    player_file = os.path.join(current_folder, "HourlyNotifications_Play.py")
 
     @classmethod
-    def get_file_path(cls, folder, file_name):
+    def create_path(cls, folder, file_name):
         """
-        :param folder: str
-        :param file_name: str
-        :return: str
+        :param folder: Str
+        :param file_name: Str
+        :return: Str
         """
         return os.path.join(folder, file_name)
 
     @classmethod
-    def get_sounds(cls):
+    def load_sounds(cls):
         """
         Scan current directory for a sound folder, and scan that sound folder for sound files
-        :return: list or NoneType
+        :return: List or NoneType
         """
 
         # Set initial values
@@ -33,8 +35,8 @@ class Directory:
         sounds = []
 
         # Scan for a sound folder
-        for obj in os.listdir(cls.current_folder):
-            sys_path = os.path.join(cls.current_folder, obj)
+        for obj in os.listdir(cls.CURRENT_DIR):
+            sys_path = os.path.join(cls.CURRENT_DIR, obj)
             if os.path.isdir(sys_path) and 'sound' in obj:
                 cls.sound_folder = sys_path
 
@@ -53,10 +55,10 @@ class Directory:
     def save_settings(cls, values, default, volume, minute):
         """
         Verify sound values, and save by object serialization
-        :param values: list
-        :param default: str
-        :param volume: int
-        :param minute: int
+        :param values: List
+        :param default: Str
+        :param volume: Int
+        :param minute: Int
         :return: NoneType
         """
 
@@ -71,20 +73,19 @@ class Directory:
 
         # write to save file
         data = (cls.sound_folder, sounds, volume, minute)
-        with open(cls.settings_file, "wb") as f:
+        with open(cls.SETTINGS_FILE, "wb") as f:
             pickle.dump(data, f)
 
     @classmethod
-    def get_settings(cls, gui=False):
+    def load_settings(cls, gui=False):
         """
         Load from save file by object deserialization
-        :param gui: bool
-        :param time: bool
-        :return: tuple or error
+        :param gui: Bool
+        :return: Tuple or Exception
         """
 
         try:
-            with open(cls.settings_file, "rb") as f:
+            with open(cls.SETTINGS_FILE, "rb") as f:
                 folder, sounds, volume, minute = pickle.load(f)
             if gui:
                 return sounds, int(volume * 100), minute
@@ -100,30 +101,31 @@ class Directory:
         :param error: Tuple
         :return: NoneType
         """
-        with open(cls.log_file, "wb") as f:
+        with open(cls.ERROR_FILE, "wb") as f:
             pickle.dump(error, f)
 
     @classmethod
-    def get_error(cls):
+    def load_error(cls):
         """
         :return: Tuple or NoneType
         """
         try:
-            with open(cls.log_file, "rb") as f:
+            with open(cls.ERROR_FILE, "rb") as f:
                 return pickle.load(f)
         except FileNotFoundError:
             return None
 
     @classmethod
-    def set_off(cls, off):
+    def set_player_off(cls, off):
         """
         :param off: Bool
         :return: NoneType
         """
-        with open(cls.ctrl_file, "wb") as f:
+        with open(cls.SWITCH_FILE, "wb") as f:
             pickle.dump(off, f)
         if not off:
-            subprocess.Popen(["python", cls.player_file], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.Popen(["python", cls.PLAYER_SCRIPT], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                             creationflags=0x08000000)
 
     @classmethod
     def player_off(cls):
@@ -132,7 +134,16 @@ class Directory:
         :return: Bool
         """
         try:
-            with open(cls.ctrl_file, "rb") as f:
+            with open(cls.SWITCH_FILE, "rb") as f:
                 return pickle.load(f)
         except FileNotFoundError:
             return False
+
+    @classmethod
+    def write_log(cls, log):
+        """
+        :param log: Str
+        :return: NoneType
+        """
+        with open(cls.LOG_FILE, "a") as f:
+            f.write(log + "\n")
