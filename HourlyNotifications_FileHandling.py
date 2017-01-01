@@ -1,6 +1,8 @@
 # Reads and writes to files and folders
 
-import os, pickle, subprocess
+import os
+import pickle
+import subprocess
 
 
 class System:
@@ -58,39 +60,39 @@ class System:
         :param values: List
         :param default: Str
         :param volume: Int
-        :param minute: Int
+        :param minute: Str
         :return: NoneType
         """
 
         # create dictionary of sounds, discarding non-sound values
-        sounds = dict()
+        sound_choices = dict()
         for i in range(len(values)):
             if values[i] != default:
-                sounds[i] = values[i]
+                sound_choices[i] = values[i]
 
         # Sound class requires volume to be float between 0 and 1
         volume /= 100
 
         # write to save file
-        data = (cls.sound_folder, sounds, volume, minute)
+        data = dict(folder=cls.sound_folder, choices=sound_choices, volume=volume, minute=minute)
         with open(cls.SETTINGS_FILE, "wb") as f:
             pickle.dump(data, f)
 
     @classmethod
-    def load_settings(cls, gui=False):
+    def load_settings(cls):
         """
         Load from save file by object deserialization
-        :param gui: Bool
-        :return: Tuple or Exception
+        :return: Dict or Exception; Dict has the keys "folder", "choices", "volume", and "minute"
+            :folder: Str
+            :choices: List of Str
+            :volume: Float
+            :minute: Str
         """
 
         try:
             with open(cls.SETTINGS_FILE, "rb") as f:
-                folder, sounds, volume, minute = pickle.load(f)
-            if gui:
-                return sounds, int(volume * 100), minute
-            else:
-                return folder, sounds, volume, minute
+                settings = pickle.load(f)
+            return settings
         except FileNotFoundError:
             # reached when save file is incomplete or non-existent
             raise
@@ -116,28 +118,29 @@ class System:
             return None
 
     @classmethod
-    def set_player_off(cls, off):
+    def control_player(cls, player_on=True, open_player=False):
         """
-        :param off: Bool
+        :param player_on: Bool
+        :param open_player: Bool
         :return: NoneType
         """
         with open(cls.SWITCH_FILE, "wb") as f:
-            pickle.dump(off, f)
-        if not off:
+            pickle.dump(player_on, f)
+        if open_player:
             subprocess.Popen(["python", cls.PLAYER_SCRIPT], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                              creationflags=0x08000000)
 
     @classmethod
-    def player_off(cls):
+    def notifications_on(cls):
         """
-        Check if player needs to shut off
+        Used by GUI to determine if player is running; used by player to determine if it's supposed to be running
         :return: Bool
         """
         try:
             with open(cls.SWITCH_FILE, "rb") as f:
                 return pickle.load(f)
         except FileNotFoundError:
-            return False
+            return True
 
     @classmethod
     def write_log(cls, log):

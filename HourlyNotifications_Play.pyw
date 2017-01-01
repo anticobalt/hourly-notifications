@@ -16,7 +16,7 @@ def main():
         System.write_log("\n".join(player.log))
         for i in range(10):
             time.sleep(1)
-            if System.player_off():
+            if not System.notifications_on():
                 break
         else:  # executed if loop completes
             continue
@@ -28,6 +28,7 @@ class Sound:
     def __init__(self):
         self.hour_last_played = None
         self.log = []
+        self.settings = {}
 
     def decide_play(self):
         """
@@ -37,7 +38,8 @@ class Sound:
         self.log = []
         system_time = d.now().time()
         self.log.append(str(system_time))
-        minute = int(System.load_settings(gui=False)[3])
+        self.settings = System.load_settings()
+        minute = int(self.settings['minute'])
         
         for hour in range(24):
             if (self.hour_last_played != hour) and (t(hour, minute) <= system_time <= t(hour, minute+1)):
@@ -49,17 +51,16 @@ class Sound:
     def play_sound(self, hour):
         """
         Tries to play a sound
-        :param hour: int
-        :return: bool
+        :param hour: Int
+        :return: Bool
         """
         try:
-            folder, sounds, volume, minute = System.load_settings(gui=False)
-            file_name = sounds[hour]
-            file = System.create_path(folder, file_name)
+            file_name = self.settings['choices'][hour]
+            file = System.create_path(self.settings['folder'], file_name)
             audio = pyglet.media.load(file)
             player = pyglet.media.Player()
             player.queue(audio)
-            player.volume = volume
+            player.volume = self.settings['volume']
             player.play()
             return True
         except KeyError:
@@ -67,9 +68,12 @@ class Sound:
         except UnicodeEncodeError:  # will be raised even if file doesn't exist to start with
             error = (file, UnicodeEncodeError)
             System.save_error(error)
+            return False
         except pyglet.media.avbin.AVbinException:
             error = (file, FileNotFoundError)
             System.save_error(error)
+            return False
 
 if __name__ == "__main__":
+    System.control_player(player_on=True)
     main()

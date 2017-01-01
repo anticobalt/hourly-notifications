@@ -1,4 +1,4 @@
-# Creates GUI that allows user to change settings, and runs the main script
+# The GUI; all preferences are set here
 
 from tkinter import *
 from tkinter import messagebox, simpledialog
@@ -8,7 +8,7 @@ from HourlyNotifications_FileHandling import System
 def main():
     """
     Create gui from saved settings or default settings
-    :return:
+    :return: NoneType
     """
     gui = Interface()
     sounds = System.load_sounds()
@@ -16,14 +16,15 @@ def main():
     if not sounds:
         gui.warning("Sound files not located. Program will exit.", close=True)
     try:
-        saved_choices, saved_volume, minute = System.load_settings(gui=True)
-        gui.volume = saved_volume
-        gui.minute = str(System.load_settings()[3]).zfill(2)
+        settings = System.load_settings()
+        choices = settings['choices']
+        gui.volume = int(settings['volume'] * 100)
+        gui.minute = str(settings['minute']).zfill(2)
     except FileNotFoundError:
-        saved_choices = None
+        choices = None
 
     gui.draw_topbar()
-    gui.create_selections(sounds, saved_choices)
+    gui.create_selections(sounds, choices)
     gui.run()
     
 
@@ -63,9 +64,8 @@ class Interface:
     def create_selections(self, sounds, saved_choices):
         """
         Increment through rows, columns, and hours to create Selections
-        :param minute: str
-        :param sounds: list
-        :param saved_choices: dict
+        :param sounds: List
+        :param saved_choices: Dict
         :return: NoneType
         """
         hour = 0
@@ -75,6 +75,9 @@ class Interface:
                     box = Selection(self._root, c, r, hour, self.minute, sounds, saved_choice=saved_choices[hour])
                 except:
                     box = Selection(self._root, c, r, hour, self.minute, sounds)
+                finally:
+                    box.draw_label()
+                    box.draw_dropdown()
                 hour += 1
                 self._selections.append(box)
 
@@ -119,7 +122,7 @@ class Interface:
         if new_minute in range(60):  # if user didn't cancel
             self.minute = str(new_minute).zfill(2)
             for box in self._selections:
-                box.set_minute(self.minute)
+                box.update_minute(self.minute)
             self.save()
 
     def save(self):
@@ -136,10 +139,10 @@ class Interface:
 
     def warning(self, error, close=False, playback_error=False):
         """
-        Generalized popup warning
-        :param error: str or tuple
-        :param close: bool
-        :param playback_error: bool
+        Generalized warning popup
+        :param error: Str or Tuple
+        :param close: Bool
+        :param playback_error: Bool
         :return: NoneType
         """
         if playback_error:
@@ -157,12 +160,12 @@ class Interface:
         Turns playback of notifications on or off
         :return: NoneType
         """
-        if System.player_off():
-            System.set_player_off(False)
-            message = "Notifications are now ON."
-        else:
-            System.set_player_off(True)
+        if System.notifications_on():
+            System.control_player(player_on=False, open_player=False)
             message = "Notifications are now OFF."
+        else:
+            System.control_player(player_on=True, open_player=True)
+            message = "Notifications are now ON."
         messagebox.showinfo("Playback Status", message)
 
 
@@ -176,11 +179,11 @@ class Selection:
     def __init__(self, root, time_column, time_row, hour, minute, sounds, saved_choice=None):
         """
         :param root: Tk
-        :param time_column: int
-        :param time_row: int
-        :param hour: int
-        :param sounds: list
-        :param saved_choice: str or NoneType
+        :param time_column: Int
+        :param time_row: Int
+        :param hour: Int
+        :param sounds: List
+        :param saved_choice: Str or NoneType
         """
         self._root = root
         self._hour = hour
@@ -194,11 +197,14 @@ class Selection:
         self._choice = StringVar(self._root)
         self._dropdown = OptionMenu(root, self._choice, *sounds)
 
-        # Draw self
-        self._draw_label()
-        self._draw_dropdown()
+    @property
+    def choice(self):
+        """
+        :return: str
+        """
+        return self._choice.get()
 
-    def _draw_label(self):
+    def draw_label(self):
         """
         Draw text indicating what time's notification can be set in following menu
         :return: NoneType
@@ -210,7 +216,7 @@ class Selection:
         self._label.grid(row=self._time_row * 2, column=self._time_column,
                          padx=Selection.UNIFORM_PADDING, pady=Selection.LABEL_PADDING)
 
-    def _draw_dropdown(self):
+    def draw_dropdown(self):
         """
         Draw menu which lets users choose notification for a given time
         :return: NoneType
@@ -222,14 +228,7 @@ class Selection:
         self._dropdown.grid(row=(self._time_row * 2) + 1, column=self._time_column,
                             padx=Selection.UNIFORM_PADDING, pady=Selection.DROPDOWN_PADDING)
 
-    @property
-    def choice(self):
-        """
-        :return: str
-        """
-        return self._choice.get()
-
-    def set_minute(self, minute):
+    def update_minute(self, minute):
         """
         :param minute: str
         :return: NoneType
