@@ -15,7 +15,7 @@ class System:
     ERROR_FILE = os.path.join(CURRENT_DIR, "error.pkl")
     SWITCH_FILE = os.path.join(CURRENT_DIR, "ctrl.pkl")
     LOG_FILE = os.path.join(CURRENT_DIR, "log.txt")
-    PLAYER_SCRIPT = os.path.join(CURRENT_DIR, "HourlyNotifications_Play.pyw")
+    PLAYER_SCRIPT = os.path.join(CURRENT_DIR, "player.pyw")
 
     sound_folder = None
 
