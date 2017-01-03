@@ -4,6 +4,9 @@ import os
 import pickle
 import subprocess
 
+OLD_PROGRAM_VERSIONS = ["Affinity"]
+CURRENT_PROGRAM_VERSION = "Bauxite"
+
 
 class System:
 
@@ -140,7 +143,7 @@ class System:
             with open(cls.SWITCH_FILE, "rb") as f:
                 return pickle.load(f)
         except FileNotFoundError:
-            return True
+            return False
 
     @classmethod
     def write_log(cls, log):
@@ -150,3 +153,24 @@ class System:
         """
         with open(cls.LOG_FILE, "a") as f:
             f.write(log + "\n")
+
+    @classmethod
+    def convert_preferences(cls):
+        """
+        :return: Bool; True if converted, False otherwise
+        """
+        affinity_preferences = [os.path.join(cls.CURRENT_DIR, "soundsettings.pkl"),
+                                os.path.join(cls.CURRENT_DIR, "timesettings.pkl")]
+
+        if os.path.exists(affinity_preferences[0]):
+            with open(affinity_preferences[0], "rb") as f:
+                sound_folder, sound_choices, volume = pickle.load(f)
+            with open(affinity_preferences[1], "rb") as f:
+                minute = pickle.load(f)
+            with open(cls.SETTINGS_FILE, "wb") as f:
+                pickle.dump(dict(folder=sound_folder, choices=sound_choices, volume=volume, minute=minute), f)
+            for file in affinity_preferences:
+                os.remove(file)
+            return True
+        else:
+            return False

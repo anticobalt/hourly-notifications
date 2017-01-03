@@ -1,9 +1,11 @@
 # Checks time and plays audio
 
 from HourlyNotifications_FileHandling import System
+from datetime import datetime as d, time as t
 import pyglet
 import time
-from datetime import datetime as d, time as t
+
+CURRENT_PROGRAM_VERSION = "Bauxite"
 
 
 def main():

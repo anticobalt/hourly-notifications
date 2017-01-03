@@ -1,8 +1,10 @@
 # The GUI; all preferences are set here
 
+from HourlyNotifications_FileHandling import System
 from tkinter import *
 from tkinter import messagebox, simpledialog
-from HourlyNotifications_FileHandling import System
+
+CURRENT_PROGRAM_VERSION = "Bauxite"
 
 
 def main():
@@ -99,7 +101,6 @@ class Interface:
             self.warning(error, playback_error=True)
         else:
             self.warning("No new playback errors found.")
-            System.save_error(None)
 
     def ask_new_volume(self):
         """
