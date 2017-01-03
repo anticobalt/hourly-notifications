@@ -2,13 +2,14 @@
 
 Written in Python 3.5.1, for Windows.
 
-![Screenshot](https://vgy.me/ll8vDd.png)
+![Screenshot](https://vgy.me/shUYNW.png)
 
 ### Features
-- Set sound files to play any hour of the day, any number of minutes into an hour
-- As long as the program is running, sounds will play when required
-- Use mp3, ogg, flac, or wav files as notifications
-- Set volume and save preferences
+- Sets hourly alarms
+- Plays mp3/ogg/flac/wav files
+- Can change the number of minutes into an hour alarms play at (e.g. quarter past every hour, instead of on the hour)
+- Reports playback errors
+- In-program volume settings
 
 ### How to Use
 1. Install Tkinter, Pyglet, and AVbin
@@ -18,6 +19,5 @@ Written in Python 3.5.1, for Windows.
 ### Planned Features (in no particular order of priority)
 - Allow user to choose where audio is stored
 - Quickly set the same notification for multiple hours
-- Minimize program to system tray
-- Open program on Windows startup
-- Use program without requiring the GUI to be open all the time
+- Setting to open program on Windows startup
+- More basic alarms (e.g. play a sound every 15 minutes)
