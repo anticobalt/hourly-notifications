@@ -1,6 +1,6 @@
 # The GUI; all preferences are set here
 
-from HourlyNotifications_FileHandling import System
+from filehandling import System
 from tkinter import *
 from tkinter import messagebox, simpledialog
 

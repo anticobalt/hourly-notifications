@@ -1,4 +1,6 @@
-from HourlyNotifications_FileHandling import System
+# Converts preference file from an older format to the format compatible with current code
+
+from filehandling import System
 
 CURRENT_PROGRAM_VERSION = "Bauxite"
 
