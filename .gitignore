@@ -1,10 +1,10 @@
-#Accessory Files
+# Accessory Files
 sound*/
 avbin.dll
 *.pkl
 *.txt
 
-#Pycharm
+# Pycharm
 .idea/
 
 # Byte-compiled / optimized / DLL files

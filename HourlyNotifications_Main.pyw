@@ -38,7 +38,7 @@ class Interface:
         self.ROW_COUNT = 4
 
         self._root = Tk()
-        self._root.title("Hourly Notifications")
+        self._root.title("Hourly Notifications - 'Bauxite'")
         self._selections = []
         self._topbar = Menu(self._root)
         self._error_handled = []
