@@ -1,3 +1,3 @@
 @echo off
 cls
-python preference_converter.py
+python converter.py
