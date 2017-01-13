@@ -2,7 +2,7 @@
 
 from filehandling import System
 
-CURRENT_PROGRAM_VERSION = "Bauxite"
+CURRENT_PROGRAM_VERSION = "Conundrum"
 
 if System.convert_preferences():
     print("Success.")

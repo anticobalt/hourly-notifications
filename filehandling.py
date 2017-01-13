@@ -3,21 +3,24 @@
 import os
 import pickle
 import subprocess
+import random
 
-OLD_PROGRAM_VERSIONS = ["Affinity"]
-CURRENT_PROGRAM_VERSION = "Bauxite"
+OLD_PROGRAM_VERSIONS = ["Affinity", "Bauxite"]
+CURRENT_PROGRAM_VERSION = "Conundrum"
 
 
 class System:
 
     CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
     SETTINGS_FILE = os.path.join(CURRENT_DIR, "settings.pkl")
+    BACKUP_SETTINGS_FILE = os.path.join(CURRENT_DIR, "settings_backup.pkl")
     ERROR_FILE = os.path.join(CURRENT_DIR, "error.pkl")
     SWITCH_FILE = os.path.join(CURRENT_DIR, "ctrl.pkl")
     LOG_FILE = os.path.join(CURRENT_DIR, "log.txt")
     PLAYER_SCRIPT = os.path.join(CURRENT_DIR, "player.pyw")
 
-    sound_folder = None
+    sound_folder = ""
+    alt_sound_folder = ""
 
     @classmethod
     def create_path(cls, folder, file_name):
@@ -29,21 +32,27 @@ class System:
         return os.path.join(folder, file_name)
 
     @classmethod
-    def load_sounds(cls):
+    def find_sound_folder(cls):
         """
-        Scan current directory for a sound folder, and scan that sound folder for sound files
-        :return: List or NoneType
+        :return: Str
         """
-
-        # Set initial values
-        file_types = ["ogg", "mp3", "flac", "wav"]
-        sounds = []
-
-        # Scan for a sound folder
         for obj in os.listdir(cls.CURRENT_DIR):
             sys_path = os.path.join(cls.CURRENT_DIR, obj)
             if os.path.isdir(sys_path) and 'sound' in obj:
-                cls.sound_folder = sys_path
+                return sys_path
+        else:
+            return ""
+
+    @classmethod
+    def load_hourly_sounds(cls):
+        """
+        Scan current directory for a sound folder, and scan that sound folder for sound files
+        :return: List
+        """
+        # Set initial values
+        file_types = ["ogg", "mp3", "flac", "wav"]
+        sounds = []
+        cls.sound_folder = cls.find_sound_folder()
 
         # Create a list of sounds from sound folder
         if cls.sound_folder:
@@ -54,20 +63,38 @@ class System:
                     sounds.extend(files)
             return sounds
         else:
-            return None
+            return []
 
     @classmethod
-    def save_settings(cls, values, default, volume, minute):
+    def load_alt_sound(cls):
         """
-        Verify sound values, and save by object serialization
+        :return: Str
+        """
+        cls.sound_folder = cls.find_sound_folder()
+
+        if cls.sound_folder:
+            for obj in os.listdir(cls.sound_folder):
+                path = os.path.join(cls.sound_folder, obj)
+                if os.path.isdir(os.path.join(cls.sound_folder, obj)) and 'alt' in obj:
+                    cls.alt_sound_folder = path
+
+        if cls.alt_sound_folder:
+            return os.path.join(cls.alt_sound_folder, random.choice(os.listdir(cls.alt_sound_folder)))
+        else:
+            return ""
+
+    @classmethod
+    def save_settings(cls, values, default, volume, minute, custom_interval, custom_interval_state):
+        """
+        Only called by the GUI
         :param values: List
         :param default: Str
         :param volume: Int
         :param minute: Str
+        :param custom_interval: Int
+        :param custom_interval_state: Int
         :return: NoneType
         """
-
-        # create dictionary of sounds, discarding non-sound values
         sound_choices = dict()
         for i in range(len(values)):
             if values[i] != default:
@@ -76,20 +103,30 @@ class System:
         # Sound class requires volume to be float between 0 and 1
         volume /= 100
 
-        # write to save file
-        data = dict(folder=cls.sound_folder, choices=sound_choices, volume=volume, minute=minute)
+        data = dict(version=CURRENT_PROGRAM_VERSION, folder=cls.sound_folder, choices=sound_choices, volume=volume,
+                    minute=minute, custom_interval=custom_interval, custom_interval_state=custom_interval_state)
+        cls.save_processed_settings(data)
+
+    @classmethod
+    def save_processed_settings(cls, data):
+        """
+        :param data: Dict
+        :return: NoneType
+        """
         with open(cls.SETTINGS_FILE, "wb") as f:
             pickle.dump(data, f)
 
     @classmethod
     def load_settings(cls):
         """
-        Load from save file by object deserialization
-        :return: Dict or Exception; Dict has the keys "folder", "choices", "volume", and "minute"
+        :return: Dict or Exception; Dict has the following keys:
+            :version: Str
             :folder: Str
-            :choices: List of Str
+            :choices: List of Strings
             :volume: Float
             :minute: Str
+            :custom_interval: Int
+            :custom_interval_state: Int
         """
 
         try:
@@ -112,13 +149,26 @@ class System:
     @classmethod
     def load_error(cls):
         """
-        :return: Tuple or NoneType
+        :return: Tuple
         """
         try:
             with open(cls.ERROR_FILE, "rb") as f:
                 return pickle.load(f)
         except FileNotFoundError:
-            return None
+            return ()
+
+    @classmethod
+    def valid_file(cls, file, sound_file=False):
+        """
+        :param file: Str
+        :param sound_file: Bool
+        :return: Bool
+        """
+        if sound_file:
+            address = os.path.join(cls.sound_folder, file)
+        else:
+            address = os.path.join(cls.CURRENT_DIR, file)
+        return os.path.exists(address)
 
     @classmethod
     def control_player(cls, player_on=True, open_player=False):
@@ -159,18 +209,33 @@ class System:
         """
         :return: Bool; True if converted, False otherwise
         """
-        affinity_preferences = [os.path.join(cls.CURRENT_DIR, "soundsettings.pkl"),
-                                os.path.join(cls.CURRENT_DIR, "timesettings.pkl")]
+        try:
+            settings = cls.load_settings()
+        except FileNotFoundError:
+            pass
 
-        if os.path.exists(affinity_preferences[0]):
-            with open(affinity_preferences[0], "rb") as f:
+        if os.path.exists(os.path.join(cls.CURRENT_DIR, "soundsettings.pkl")):
+            # Affinity
+            with open(os.path.join(cls.CURRENT_DIR, "soundsettings.pkl"), "rb") as f:
                 sound_folder, sound_choices, volume = pickle.load(f)
-            with open(affinity_preferences[1], "rb") as f:
+            with open(os.path.join(cls.CURRENT_DIR,"timesettings.pkl"), "rb") as f:
                 minute = pickle.load(f)
-            with open(cls.SETTINGS_FILE, "wb") as f:
-                pickle.dump(dict(folder=sound_folder, choices=sound_choices, volume=volume, minute=minute), f)
-            for file in affinity_preferences:
-                os.remove(file)
-            return True
+            settings = dict(version=CURRENT_PROGRAM_VERSION, folder=sound_folder, choices=sound_choices, volume=volume,
+                            minute=minute, custom_interval=0, custom_interval_state=0)
+            if settings["choices"] is None:
+                settings["choices"] = dict()
+
+        elif 'version' not in settings:
+            # Bauxite
+            settings['version'] = CURRENT_PROGRAM_VERSION
+            settings['custom_interval'] = 0
+            settings['custom_interval_state'] = 0
+            if settings["choices"] is None:
+                settings["choices"] = dict()
+            os.rename(cls.SETTINGS_FILE, cls.BACKUP_SETTINGS_FILE)
+
         else:
             return False
+
+        cls.save_processed_settings(settings)
+        return True
