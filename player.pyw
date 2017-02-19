@@ -107,10 +107,6 @@ class Sound:
 
         self.last_handled_time = ctime
 
-        print(state)
-        print(self.interval_start_time)
-        print(self.interval)
-
     def play_sound(self, file):
         """
         :param file: Str
