@@ -1,6 +1,7 @@
 # hourly-notifications
 
 Written in Python 3.5.1, for Windows.
+Only tested on Windows 7 and 10.
 
 ![Screenshot](https://vgy.me/shUYNW.png)
 

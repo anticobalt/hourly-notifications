@@ -105,6 +105,8 @@ class Sound:
             else:
                 self.log.append("No alt sounds found.")
 
+        self.log.append(str((ctime - self.interval_start_time)/60) + " minutes since alt sound playback cycle "
+                                                                      "started.")
         self.last_handled_time = ctime
 
     def play_sound(self, file):

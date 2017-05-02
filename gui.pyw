@@ -155,6 +155,7 @@ class MasterWindow:
         preferences.add_command(label="Set Volume", command=self.ask_new_volume)
         preferences.add_command(label="Set Minute of the Hour", command=self.ask_new_minute)
         preferences.add_command(label="Set Custom Notification", command=self.ask_custom_notification)
+        preferences.add_command(label="Toggle Load on Startup", command=self.toggle_startup)
         debug.add_command(label="Check for Standard Playback Errors", command=self.check_errors)
 
         self._top_bar.add_cascade(label="Preferences", menu=preferences)
@@ -270,7 +271,8 @@ class MasterWindow:
         """
         self._warning(message, close=True)
 
-    def toggle_playback(self, silent=False):
+    @staticmethod
+    def toggle_playback(silent=False):
         """
         :return: NoneType
         """
@@ -282,6 +284,15 @@ class MasterWindow:
             message = "Notifications are now ON."
         if not silent:
             messagebox.showinfo("Playback Status", message)
+
+    @staticmethod
+    def toggle_startup():
+        message = "Explorer will open the location of user startup programs. \n" \
+                  "To enable auto-startup, right-click player.pyw in the original program folder to create a " \
+                  "shortcut, and move that shortcut into the startup folder that just opened. \n" \
+                  "To disable auto-startup, delete the player.pyw shortcut from startup folder."
+        messagebox.showinfo("Enable/Disable Auto-Startup of HourlyNotifications", message)
+        System.open_startup_folder()
 
 
 class Selection:

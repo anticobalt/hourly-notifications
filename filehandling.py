@@ -19,6 +19,9 @@ class System:
     LOG_FILE = os.path.join(CURRENT_DIR, "log.txt")
     PLAYER_SCRIPT = os.path.join(CURRENT_DIR, "player.pyw")
 
+    USER_PROFILE = os.getenv("UserProfile")
+    USER_STARTUP_FOLDER = os.path.join(USER_PROFILE, "AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup")
+
     sound_folder = ""
     alt_sound_folder = ""
 
@@ -194,6 +197,14 @@ class System:
                 return pickle.load(f)
         except FileNotFoundError:
             return False
+
+    @classmethod
+    def open_startup_folder(cls):
+        """
+        Used by GUI to open startup folder in explorer.
+        :return: NoneType
+        """
+        subprocess.Popen('explorer "' + cls.USER_STARTUP_FOLDER + '"')
 
     @classmethod
     def write_log(cls, log):
