@@ -135,6 +135,18 @@ class Sound:
             self.log.append("An unexpected error was encountered.")
         return False
 
+    def test(self, filename, folder, volume):
+        """
+        Used by GUI to play a sound once
+        :param filename: Str
+        :param folder: Str
+        :param volume: Float (0 to 1)
+        :return: Bool
+        """
+        path = System.create_path(folder, filename)
+        self.settings['volume'] = volume
+        return self.play_sound(path)
+
 
 if __name__ == "__main__":
     System.control_player(player_on=True)

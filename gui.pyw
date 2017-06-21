@@ -2,7 +2,9 @@
 
 from tkinter import *
 from tkinter import messagebox, simpledialog
+from tkinter import ttk
 from filehandling import System
+from player import Sound
 import time
 
 CURRENT_PROGRAM_VERSION = "Conundrum"
@@ -174,7 +176,8 @@ class MasterWindow:
         hour = 0
         for c in range(self.COLUMN_COUNT):
             for r in range(self.ROW_COUNT):
-                box = Selection(self._root, c, r, hour, self.minute, sounds, saved_choice=saved_choices.get(hour))
+                box = Selection(self._root, c, r, hour, self.minute, sounds, saved_choice=saved_choices.get(hour),
+                                volume=(self.volume / 100))
                 box.build()
                 hour += 1
                 self._selections.append(box)
@@ -297,12 +300,13 @@ class MasterWindow:
 
 class Selection:
 
-    UNIFORM_PADDING = (5, 5)
-    LABEL_PADDING = (5, 0)
-    DROPDOWN_PADDING = (0, 5)
-    DEFAULT_CHOICE = "Choose a sound file"
+    UNIFORM_PADDING = (10, 10)
+    LABEL_PADDING = (10, 0)
+    BUTTON_PADDING = (5, 3)
+    DROPDOWN_PADDING = (0, 10)
+    DEFAULT_CHOICE = "None"
 
-    def __init__(self, root, time_column, time_row, hour, minute, sounds, saved_choice):
+    def __init__(self, root, time_column, time_row, hour, minute, sounds, saved_choice, volume):
         """
         :param root: Tk
         :param time_column: Int
@@ -310,6 +314,7 @@ class Selection:
         :param hour: Int
         :param sounds: List
         :param saved_choice: Str or NoneType
+        :param volume: Float; for play button
         """
         self._root = root
         self._hour = hour
@@ -317,11 +322,16 @@ class Selection:
         self._time_column = time_column
         self._time_row = time_row
         self._saved_choice = saved_choice
+        self._volume = volume
+        self._rows_occupied = 3
         
         # Initialize tkinter objects
-        self._label = Text(self._root, height=1, width=15)
+        self._label = Text(self._root, height=1, width=15, relief="solid", background="#F0F0F0", font="Calibri")
+        self._play_button = Button(self._root, text="Play", command=self._play_test, relief="groove",
+                                   font=("Calibri", 10, "bold"))
         self._choice = StringVar(self._root)
-        self._dropdown = OptionMenu(root, self._choice, *sounds)
+        self._dropdown = ttk.Combobox(self._root, textvariable=self._choice, values=sounds, font=("Calibri", 12),
+                                      width=10)
 
     @property
     def choice(self):
@@ -339,8 +349,16 @@ class Selection:
         self._label.insert(END, "Sound for " + str(self._hour) + ":" + self._minute, 'center')
 
         # Each row of Selection objects actually has two subrows; Tkinter uses these subrows to draw
-        self._label.grid(row=self._time_row * 2, column=self._time_column,
+        self._label.grid(row=self._time_row * self._rows_occupied, column=self._time_column,
                          padx=Selection.UNIFORM_PADDING, pady=Selection.LABEL_PADDING)
+
+    def _draw_play_button(self):
+        """
+        Draw button that will play associated sound when clicked.
+        :return: NoneType
+        """
+        self._play_button.grid(row=(self._time_row * self._rows_occupied) + 1, column=self._time_column,
+                         padx=Selection.UNIFORM_PADDING, pady=Selection.BUTTON_PADDING)
 
     def _draw_dropdown(self):
         """
@@ -351,14 +369,32 @@ class Selection:
             self._choice.set(self._saved_choice)
         else:
             self._choice.set(Selection.DEFAULT_CHOICE)
-        self._dropdown.grid(row=(self._time_row * 2) + 1, column=self._time_column,
+        self._dropdown.grid(row=(self._time_row * self._rows_occupied) + 2, column=self._time_column,
                             padx=Selection.UNIFORM_PADDING, pady=Selection.DROPDOWN_PADDING)
+
+    def _play_test(self):
+        """
+        :return: NoneType
+        """
+        player = Sound()
+        folder = System.find_sound_folder()  # folder exists, otherwise error would've be been thrown at program start
+        try:
+            settings = System.load_settings()
+            volume = settings['volume']
+        except FileNotFoundError:
+            volume = self._volume
+        if self.choice == Selection.DEFAULT_CHOICE:
+            messagebox.showwarning(title="Playback Error", message="No sound set for this time.")
+        else:
+            if not player.test(filename=self.choice, folder=folder, volume=volume):
+                messagebox.showwarning(title="Playback Error", message="Problem playing file. Check the log file.")
 
     def build(self):
         """
         :return: NoneType
         """
         self._draw_label()
+        self._draw_play_button()
         self._draw_dropdown()
 
     def update_minute(self, minute):
