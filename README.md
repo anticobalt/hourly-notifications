@@ -17,4 +17,4 @@ Written in Python 3.5.1, for Windows.
 4. In the 'sounds' folder, create a folder called 'alt' and put as many sound files for the custom alarm in here as you want. When it is time for the alarm to sound, a random file will be chosen to play.
 
 ## License
-Program license under [MIT](License).
+Program is licensed under [MIT](LICENSE).
