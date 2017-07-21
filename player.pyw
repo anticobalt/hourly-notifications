@@ -7,7 +7,7 @@ import time
 import sys
 import traceback
 
-CURRENT_PROGRAM_VERSION = "Conundrum"
+CURRENT_PROGRAM_VERSION = "Estuary"
 
 
 def main():
@@ -27,13 +27,14 @@ class Sound:
         self.hour_last_played = None
         self.log = []
         self.settings = dict()
-        self.interval = 0
+        self.interval = 0  # minutes between each sounding of custom notification
         self.interval_start_time = time.time()
         self.last_handled_time = time.time()
 
     def load_settings(self):
         self.settings = System.load_settings()
-        self.interval = self.settings['custom_interval']
+        if isinstance(self.settings['custom_interval'], int) and self.settings['custom_interval'] > 0:
+            self.interval = self.settings['custom_interval']
 
     def run(self):
         while 1:
@@ -43,7 +44,7 @@ class Sound:
                 self.decide_play_alt()
             except OSError:
                 # Resolves [WinError 2005401450] Windows Error 0x88780096 thrown by AudioSwitcher (by @xenolightning)
-                System.control_player(player_on=True, open_player=True)
+                System.control_player(player_on=True, start_new_instance=True)
                 self.log.append("OS Error Resolved.")
                 break
             except:
@@ -53,7 +54,7 @@ class Sound:
             System.write_log("\n".join(self.log))
             for i in range(self.run_delay):
                 time.sleep(1)
-                if not System.notifications_on():
+                if System.get_player_on() is False:
                     break
             else:
                 continue
@@ -63,6 +64,9 @@ class Sound:
         """
         :return: NoneType
         """
+        if System.get_hourlies_on() is False:
+            return
+
         system_time = d.now().time()
         minute = int(self.settings['minute'])
         self.log.append(str(system_time))
@@ -85,6 +89,13 @@ class Sound:
         """
         :return: NoneType
         """
+        if System.get_customs_on() is False:
+            return
+
+        if self.interval == 0:
+            System.control_player(player_on=False)
+            return
+
         state = self.settings['custom_interval_state']
         ctime = time.time()
 
@@ -106,7 +117,7 @@ class Sound:
                 self.log.append("No alt sounds found.")
 
         self.log.append(str((ctime - self.interval_start_time)/60) + " minutes since alt sound playback cycle "
-                                                                      "started.")
+                        "started. Time is " + str(d.now().time()) + ". Interval is " + str(self.interval) + ".")
         self.last_handled_time = ctime
 
     def play_sound(self, file):

@@ -4,10 +4,10 @@ from tkinter import *
 from tkinter import messagebox, simpledialog
 from tkinter import ttk
 from filehandling import System
-from player import Sound
+from player import Sound  # for sound testing
 import time
 
-CURRENT_PROGRAM_VERSION = "Conundrum"
+CURRENT_PROGRAM_VERSION = "Estuary"
 
 
 def main():
@@ -40,7 +40,7 @@ class MasterWindow:
         self.ROW_COUNT = 4
 
         self._root = Tk()
-        self._root.title("Hourly Notifications - " + CURRENT_PROGRAM_VERSION)
+        self._root.title("Hourly Notifications")
         self._selections = []
         self._top_bar = Menu(self._root)
 
@@ -153,17 +153,24 @@ class MasterWindow:
         :return: NoneType
         """
         preferences = Menu(self._top_bar, tearoff=0)
-        debug = Menu(self._top_bar, tearoff=0)
+        notify_state = Menu(self._top_bar, tearoff=0)
+        help_ = Menu(self._top_bar, tearoff=0)
+
         preferences.add_command(label="Set Volume", command=self.ask_new_volume)
         preferences.add_command(label="Set Minute of the Hour", command=self.ask_new_minute)
         preferences.add_command(label="Set Custom Notification", command=self.ask_custom_notification)
         preferences.add_command(label="Toggle Load on Startup", command=self.toggle_startup)
-        debug.add_command(label="Check for Standard Playback Errors", command=self.check_errors)
+        notify_state.add_command(label="All", command=self.toggle_all_playback)
+        notify_state.add_command(label="Hourlies", command=self.toggle_hourly_playback)
+        notify_state.add_command(label="Custom", command=self.toggle_custom_playback)
+        help_.add_command(label="Check for Standard Playback Errors", command=self.check_errors)
+        help_.add_command(label="Current Notification States", command=self.display_notify_states)
+        help_.add_command(label="About", command=self.display_about)
 
-        self._top_bar.add_cascade(label="Preferences", menu=preferences)
-        self._top_bar.add_cascade(label="Debugging", menu=debug)
+        self._top_bar.add_cascade(label="Change Preferences", menu=preferences)
         self._top_bar.add_command(label="Save Preferences", command=self.save)
-        self._top_bar.add_command(label="Toggle Notifications", command=self.toggle_playback)
+        self._top_bar.add_cascade(label="Toggle Notifications", menu=notify_state)
+        self._top_bar.add_cascade(label="Help", menu=help_)
         self._root.config(menu=self._top_bar)
 
     def _create_selections(self, sounds, saved_choices):
@@ -233,11 +240,10 @@ class MasterWindow:
         """
         :return: NoneType
         """
-        popup = AdvancedPopup("custom_interval", self._root, "Enter Interval in Minutes ('0' for no notification)",
+        popup = AdvancedPopup("custom_interval", self._root, "Enter Interval in Minutes (Invalid values default to 0)",
                               self._custom_interval, self._custom_interval_state,
                               ["Reset on standby", "Turn off on standby"])
         popup.build()
-        # self._ask_attribute_value(self._mutable_custom_interval, "Custom Notification", "Set Interval in Minutes", 1)
 
     def save(self):
         """
@@ -250,14 +256,16 @@ class MasterWindow:
         System.save_settings(selection_values, default, self.volume, self.minute, self.custom_interval,
                              self.custom_interval_state)
         messagebox.showinfo("Notice", "Applying settings. Give it few seconds.")
-        if System.notifications_on():
-            self.toggle_playback(silent=True)
+
+        # Reboot player
+        if System.get_player_on() is True:
+            System.control_player(player_on=False)
             time.sleep(2)
-            self.toggle_playback(silent=True)
+            System.control_player(player_on=True, start_new_instance=True)
+            messagebox.showinfo("Notice", "Player restarted. Custom notification elapsed time has been reset.")
 
     def check_errors(self):
         """
-        Uses Sound to check for playback errors
         :return: NoneType
         """
         error = System.load_error()
@@ -275,16 +283,78 @@ class MasterWindow:
         self._warning(message, close=True)
 
     @staticmethod
-    def toggle_playback(silent=False):
+    def display_notify_states():
         """
         :return: NoneType
         """
-        if System.notifications_on():
-            System.control_player(player_on=False, open_player=False)
-            message = "Notifications are now OFF."
+        player_on = str(System.get_player_on())
+        hourly_on = str(System.get_hourlies_on())
+        custom_on = str(System.get_customs_on())
+        cu_i = str(System.load_settings()["custom_interval"])
+        cu_is = str(System.load_settings()["custom_interval_state"])
+        messagebox.showinfo("Current States",
+                            "Player On: " + player_on + "\n"
+                            "Hourly Notifications On: " + hourly_on + "\n"
+                            "Custom Notifications On: " + custom_on + "\n"
+                            "Custom Interval Length: " + cu_i + "\n"
+                            "Custom Interval State: " + cu_is)
+
+    @staticmethod
+    def display_about():
+        """
+        :return: NoneType
+        """
+        messagebox.showinfo("About",
+                            "Hourly Notifications (Version: " + CURRENT_PROGRAM_VERSION + ")\n"
+                            "Website: https://github.com/anticobalt/hourly-notifications/")
+
+    def toggle_all_playback(self, silent=False):
+        """
+        :return: NoneType
+        """
+        # Override these two methods' popups
+        self.toggle_hourly_playback(silent=True)
+        self.toggle_custom_playback(silent=True)
+
+        if not silent:
+            if System.get_hourlies_on() is True:
+                hourlies = "ON"
+            else:
+                hourlies = "OFF"
+            if System.get_customs_on() is True:
+                customs = "ON"
+            else:
+                customs = "OFF"
+            message = "Hourly notifications " + hourlies + ". Custom notifications " + customs
+            messagebox.showinfo("Playback Status", message)
+
+    @staticmethod
+    def toggle_hourly_playback(silent=False):
+        """
+        :return: NoneType
+        """
+        on = System.get_hourlies_on()
+        if on:
+            System.control_player(hourlies_on=False, start_new_instance=False)
+            message = "Hourly notifications are now OFF."
         else:
-            System.control_player(player_on=True, open_player=True)
-            message = "Notifications are now ON."
+            System.control_player(hourlies_on=True, start_new_instance=True)
+            message = "Hourly notifications are now ON."
+        if not silent:
+            messagebox.showinfo("Playback Status", message)
+
+    @staticmethod
+    def toggle_custom_playback(silent=False):
+        """
+        :return: NoneType
+        """
+        on = System.get_customs_on()
+        if on:
+            System.control_player(customs_on=False, start_new_instance=False)
+            message = "Custom notifications are now OFF."
+        else:
+            System.control_player(customs_on=True, start_new_instance=True)
+            message = "Custom notifications are now ON."
         if not silent:
             messagebox.showinfo("Playback Status", message)
 

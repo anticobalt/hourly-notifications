@@ -5,8 +5,8 @@ import pickle
 import subprocess
 import random
 
-OLD_PROGRAM_VERSIONS = ["Affinity", "Bauxite"]
-CURRENT_PROGRAM_VERSION = "Conundrum"
+OLD_PROGRAM_VERSIONS = ["Affinity", "Bauxite", "Conundrum"]
+CURRENT_PROGRAM_VERSION = "Estuary"
 
 
 class System:
@@ -24,6 +24,21 @@ class System:
 
     sound_folder = ""
     alt_sound_folder = ""
+
+    @classmethod
+    def _notification_states(cls):
+        """
+        Used by GUI to determine if player is running; used by player to determine if it's supposed to be running.
+        Player is running if hourly notifications, custom notifications, or both are on.
+        :return: Dict
+        """
+        try:
+            with open(cls.SWITCH_FILE, "rb") as f:
+                return pickle.load(f)
+        except FileNotFoundError:
+            return {"player_on": False,
+                    "hourlies_on": False,
+                    "customs_on": False}
 
     @classmethod
     def create_path(cls, folder, file_name):
@@ -174,29 +189,64 @@ class System:
         return os.path.exists(address)
 
     @classmethod
-    def control_player(cls, player_on=True, open_player=False):
+    def control_player(cls, player_on=True, hourlies_on=None, customs_on=None, start_new_instance=False):
         """
-        :param player_on: Bool
-        :param open_player: Bool
+        If hourlies_on or custom_on is true/false (i.e. given as arguments), their values in the
+        switch file are changed to whatever is given. Otherwise, they are left unaltered.
+
+        Hourlies_on and customs_on have precedence over player_on.
+
+        :param player_on: Bool. Decides if player actually runs; used by Player
+        :param hourlies_on: Bool or NoneType. Used by GUI
+        :param customs_on: Bool or NoneType. Used by GUI
+        :param start_new_instance: Bool
         :return: NoneType
         """
+        states = cls._notification_states()
+        states["player_on"] = player_on
+
+        if hourlies_on is not None:
+            states["hourlies_on"] = hourlies_on
+        if customs_on is not None:
+            states["customs_on"] = customs_on
+
+        # If changes have caused both hourlies and customs to turn off, turn off the player too.
+        if states["hourlies_on"] is False and states["customs_on"] is False:
+            states["player_on"] = False
+
+        # If GUI signals on of the notifications to be turned on, but player is currently off, turn it on.
+        if (hourlies_on is True or customs_on is True) and player_on is False:
+            states["player_on"] = True
+
         with open(cls.SWITCH_FILE, "wb") as f:
-            pickle.dump(player_on, f)
-        if open_player:
+            pickle.dump(states, f)
+        if start_new_instance:
             subprocess.Popen(["python", cls.PLAYER_SCRIPT], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                              creationflags=0x08000000)
 
     @classmethod
-    def notifications_on(cls):
+    def get_player_on(cls):
         """
-        Used by GUI to determine if player is running; used by player to determine if it's supposed to be running
         :return: Bool
         """
-        try:
-            with open(cls.SWITCH_FILE, "rb") as f:
-                return pickle.load(f)
-        except FileNotFoundError:
-            return False
+        states = cls._notification_states()
+        return states["player_on"]
+
+    @classmethod
+    def get_hourlies_on(cls):
+        """
+        :return: Bool
+        """
+        states = cls._notification_states()
+        return states["hourlies_on"]
+
+    @classmethod
+    def get_customs_on(cls):
+        """
+        :return: Bool
+        """
+        states = cls._notification_states()
+        return states["customs_on"]
 
     @classmethod
     def open_startup_folder(cls):
@@ -223,7 +273,7 @@ class System:
         try:
             settings = cls.load_settings()
         except FileNotFoundError:
-            pass
+            return False
 
         if os.path.exists(os.path.join(cls.CURRENT_DIR, "soundsettings.pkl")):
             # Affinity
@@ -245,7 +295,16 @@ class System:
                 settings["choices"] = dict()
             os.rename(cls.SETTINGS_FILE, cls.BACKUP_SETTINGS_FILE)
 
+        elif settings["version"] == "Conundrum":
+            # Placeholder
+            return False
+
+        elif settings["version"] == "Estuary":
+            # Placeholder
+            return False
+
         else:
+            # This should never be reached
             return False
 
         cls.save_processed_settings(settings)
