@@ -199,28 +199,34 @@ class System:
         :param player_on: Bool. Decides if player actually runs; used by Player
         :param hourlies_on: Bool or NoneType. Used by GUI
         :param customs_on: Bool or NoneType. Used by GUI
-        :param start_new_instance: Bool
+        :param start_new_instance: Bool; manual request for new player to start, no matter what
         :return: NoneType
         """
         states = cls._notification_states()
-        states["player_on"] = player_on
+        player_on_currently = states["player_on"]  # is player running right now?
+
+        # Decide if player should be on or off by the end of this function
+        if (hourlies_on is True) or (customs_on is True):  # arguments are True/True, True/False, or True/None
+            player_on_later = True
+        elif (hourlies_on is None) or (customs_on is None):  # args are None/None or False/None (True/None prev handled)
+            if (states["hourlies_on"] is True and hourlies_on is None) or \
+                    (states["customs_on"] is True and customs_on is None):
+                player_on_later = True
+            else:
+                player_on_later = False
+        else:  # False/False
+            player_on_later = False
 
         if hourlies_on is not None:
             states["hourlies_on"] = hourlies_on
         if customs_on is not None:
             states["customs_on"] = customs_on
 
-        # If changes have caused both hourlies and customs to turn off, turn off the player too.
-        if states["hourlies_on"] is False and states["customs_on"] is False:
-            states["player_on"] = False
-
-        # If GUI signals on of the notifications to be turned on, but player is currently off, turn it on.
-        if (hourlies_on is True or customs_on is True) and player_on is False:
-            states["player_on"] = True
-
+        states["player_on"] = player_on_later
         with open(cls.SWITCH_FILE, "wb") as f:
             pickle.dump(states, f)
-        if start_new_instance:
+
+        if start_new_instance or (not player_on_currently and player_on_later):
             subprocess.Popen(["python", cls.PLAYER_SCRIPT], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                              creationflags=0x08000000)
 

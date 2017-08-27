@@ -325,7 +325,7 @@ class MasterWindow:
                 customs = "ON"
             else:
                 customs = "OFF"
-            message = "Hourly notifications " + hourlies + ". Custom notifications " + customs
+            message = "Hourly notifications " + hourlies + ". Custom notifications " + customs + "."
             messagebox.showinfo("Playback Status", message)
 
     @staticmethod
@@ -335,10 +335,10 @@ class MasterWindow:
         """
         on = System.get_hourlies_on()
         if on:
-            System.control_player(hourlies_on=False, start_new_instance=False)
+            System.control_player(hourlies_on=False)
             message = "Hourly notifications are now OFF."
         else:
-            System.control_player(hourlies_on=True, start_new_instance=True)
+            System.control_player(hourlies_on=True)
             message = "Hourly notifications are now ON."
         if not silent:
             messagebox.showinfo("Playback Status", message)
@@ -350,10 +350,10 @@ class MasterWindow:
         """
         on = System.get_customs_on()
         if on:
-            System.control_player(customs_on=False, start_new_instance=False)
+            System.control_player(customs_on=False)
             message = "Custom notifications are now OFF."
         else:
-            System.control_player(customs_on=True, start_new_instance=True)
+            System.control_player(customs_on=True)
             message = "Custom notifications are now ON."
         if not silent:
             messagebox.showinfo("Playback Status", message)
