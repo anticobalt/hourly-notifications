@@ -2,7 +2,7 @@
 
 from filehandling import System
 
-CURRENT_PROGRAM_VERSION = "Estuary"
+CURRENT_PROGRAM_VERSION = "Frivolity"
 
 if System.convert_preferences():
     print("Success.")

@@ -5,8 +5,8 @@ import pickle
 import subprocess
 import random
 
-OLD_PROGRAM_VERSIONS = ["Affinity", "Bauxite", "Conundrum"]
-CURRENT_PROGRAM_VERSION = "Estuary"
+OLD_PROGRAM_VERSIONS = ["Affinity", "Bauxite", "Conundrum", "Estuary"]
+CURRENT_PROGRAM_VERSION = "Frivolity"
 
 
 class System:
@@ -68,7 +68,7 @@ class System:
         :return: List
         """
         # Set initial values
-        file_types = ["ogg", "mp3", "flac", "wav"]
+        file_types = ["ogg", "mp3", "flac"]
         sounds = []
         cls.sound_folder = cls.find_sound_folder()
 
@@ -193,8 +193,8 @@ class System:
         """
         If hourlies_on or custom_on is true/false (i.e. given as arguments), their values in the
         switch file are changed to whatever is given. Otherwise, they are left unaltered.
-
-        Hourlies_on and customs_on have precedence over player_on.
+        
+        hourlies_on and custom_on both being false is equivalent to player_on being false.
 
         :param player_on: Bool. Decides if player actually runs; used by Player
         :param hourlies_on: Bool or NoneType. Used by GUI
@@ -204,6 +204,7 @@ class System:
         """
         states = cls._notification_states()
         player_on_currently = states["player_on"]  # is player running right now?
+        player_on_later = player_on  # will it run after this method is finished?
 
         # Decide if player should be on or off by the end of this function
         if (hourlies_on is True) or (customs_on is True):  # arguments are True/True, True/False, or True/None
@@ -269,7 +270,7 @@ class System:
         :return: NoneType
         """
         with open(cls.LOG_FILE, "a") as f:
-            f.write(log + "\n")
+            f.write(log + " PID is " + str(os.getpid()) + ".\n")
 
     @classmethod
     def convert_preferences(cls):
@@ -301,11 +302,7 @@ class System:
                 settings["choices"] = dict()
             os.rename(cls.SETTINGS_FILE, cls.BACKUP_SETTINGS_FILE)
 
-        elif settings["version"] == "Conundrum":
-            # Placeholder
-            return False
-
-        elif settings["version"] == "Estuary":
+        elif settings["version"] in ["Conundrum", "Estuary", "Frivolity"]:
             # Placeholder
             return False
 

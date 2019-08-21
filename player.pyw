@@ -2,12 +2,13 @@
 
 from filehandling import System
 from datetime import datetime as d, time as t
-import pyglet
+import pygame
+import mutagen
 import time
 import sys
 import traceback
 
-CURRENT_PROGRAM_VERSION = "Estuary"
+CURRENT_PROGRAM_VERSION = "Frivolity"
 
 
 def main():
@@ -38,6 +39,7 @@ class Sound:
 
     def run(self):
         while 1:
+        
             self.log = []
             try:
                 self.decide_play_hourly()
@@ -51,7 +53,10 @@ class Sound:
                 exc_type, exc_value, exc_traceback = sys.exc_info()
                 exception = traceback.format_exception(exc_type, exc_value, exc_traceback)
                 System.write_log("".join(exception))
-            System.write_log("\n".join(self.log))
+            
+            if self.log:
+                System.write_log("\n".join(self.log))
+            
             for i in range(self.run_delay):
                 time.sleep(1)
                 if System.get_player_on() is False:
@@ -69,7 +74,7 @@ class Sound:
 
         system_time = d.now().time()
         minute = int(self.settings['minute'])
-        self.log.append(str(system_time))
+        # self.log.append(str(system_time))
 
         for hour in range(24):
             if (self.hour_last_played != hour) and (t(hour, minute) <= system_time <= t(hour, minute+1)):
@@ -120,6 +125,10 @@ class Sound:
                         "started. Time is " + str(d.now().time()) + ". Interval is " + str(self.interval) + ".")
         self.last_handled_time = ctime
 
+    """
+    Plays sound with PyGame.
+    Do NOT initialize PyGame directly, only initialize the mixer, or the sound will not play.
+    """
     def play_sound(self, file):
         """
         :param file: Str
@@ -127,15 +136,16 @@ class Sound:
         """
         if not System.valid_file(file, sound_file=True):
             error = (file, FileNotFoundError)
-        elif not System.valid_file("avbin.dll"):
-            error = (file, ZeroDivisionError)
         else:
             try:
-                audio = pyglet.media.load(file)
-                player = pyglet.media.Player()
-                player.queue(audio)
-                player.volume = self.settings['volume']
-                player.play()
+                # Use sample rate from file, not default, which can distort sound
+                sample_rate = mutagen.File(file).info.sample_rate
+                pygame.mixer.quit()
+                pygame.mixer.init(sample_rate)
+                # Play file asynchronously
+                pygame.mixer.music.load(file)
+                pygame.mixer.music.set_volume(self.settings['volume'])
+                pygame.mixer.music.play()
                 System.save_error(())
                 return True
             except UnicodeEncodeError:

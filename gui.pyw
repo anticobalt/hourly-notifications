@@ -7,7 +7,7 @@ from filehandling import System
 from player import Sound  # for sound testing
 import time
 
-CURRENT_PROGRAM_VERSION = "Estuary"
+CURRENT_PROGRAM_VERSION = "Frivolity"
 
 
 def main():
@@ -143,8 +143,6 @@ class MasterWindow:
                                    "Rename this file to solve the problem."
         elif error_type == FileNotFoundError:
             error = problem_file + " does not exist."
-        elif error_type == ZeroDivisionError:
-            error = "File 'avbin.dll' (originally found in c:\windows\system32) is missing from the program directory."
         return error
 
     def _draw_top_bar(self):
@@ -259,9 +257,9 @@ class MasterWindow:
 
         # Reboot player
         if System.get_player_on() is True:
-            System.control_player(player_on=False)
+            System.control_player(hourlies_on=False, customs_on=False)
             time.sleep(2)
-            System.control_player(player_on=True, start_new_instance=True)
+            System.control_player(hourlies_on=True, customs_on=True, start_new_instance=True)
             messagebox.showinfo("Notice", "Player restarted. Custom notification elapsed time has been reset.")
 
     def check_errors(self):
