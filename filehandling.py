@@ -64,8 +64,9 @@ class System:
     @classmethod
     def load_hourly_sounds(cls):
         """
-        Scan current directory for a sound folder, and scan that sound folder for sound files
-        :return: List
+        Scan current directory for a sound folder, and scan that sound folder (recursively) for sound files.
+        Ignores the 'alt' folder.
+        :return: List of Str; the relative locations of all hourly sounds
         """
         # Set initial values
         file_types = ["ogg", "mp3", "flac"]
@@ -75,13 +76,36 @@ class System:
         # Create a list of sounds from sound folder
         if cls.sound_folder:
             folder_contents = os.listdir(cls.sound_folder)
-            for extension in file_types:
-                files = [file_name for file_name in folder_contents if extension in file_name]
-                if files:
-                    sounds.extend(files)
-            return sounds
-        else:
-            return []
+            for name in folder_contents:
+                path = os.path.join(cls.sound_folder, name)
+                if 'alt' not in name and os.path.isdir(path):
+                    sounds.extend(cls.get_files_recursive(path, file_types))
+                else:
+                    for extension in file_types:
+                        if name.endswith(extension):
+                            sounds.append(path)
+
+        return list(map(lambda file_path: os.path.relpath(file_path, cls.sound_folder), sounds))
+
+    @classmethod
+    def get_files_recursive(cls, folder_path, file_types):
+        """
+        Gets files by path that match given types/extensions recursively.
+        :param folder_path: Str
+        :param file_types: List of Str
+        :return: List of Str
+        """
+        folder_contents = os.listdir(folder_path)
+        files = []
+        for name in folder_contents:
+            path = os.path.join(folder_path, name)
+            if os.path.isdir(path):
+                files.extend(cls.get_files_recursive(path, file_types))
+            else:
+                for file_type in file_types:
+                    if name.endswith(file_type):
+                        files.append(path)
+        return files
 
     @classmethod
     def load_alt_sound(cls):
@@ -102,13 +126,14 @@ class System:
             return ""
 
     @classmethod
-    def save_settings(cls, values, default, volume, minute, custom_interval, custom_interval_state):
+    def save_settings(cls, values, default, volume, minute, profile, custom_interval, custom_interval_state):
         """
         Only called by the GUI
         :param values: List
         :param default: Str
         :param volume: Int
         :param minute: Str
+        :param profile: Str
         :param custom_interval: Int
         :param custom_interval_state: Int
         :return: NoneType
@@ -121,8 +146,9 @@ class System:
         # Sound class requires volume to be float between 0 and 1
         volume /= 100
 
-        data = dict(version=CURRENT_PROGRAM_VERSION, folder=cls.sound_folder, choices=sound_choices, volume=volume,
-                    minute=minute, custom_interval=custom_interval, custom_interval_state=custom_interval_state)
+        data = dict(version=CURRENT_PROGRAM_VERSION, folder=os.path.join(cls.sound_folder, profile),
+                    choices=sound_choices, volume=volume, minute=minute, custom_interval=custom_interval,
+                    custom_interval_state=custom_interval_state)
         cls.save_processed_settings(data)
 
     @classmethod
@@ -154,6 +180,18 @@ class System:
         except FileNotFoundError:
             # reached when save file is incomplete or non-existent
             raise
+
+    @classmethod
+    def extract_profile_name(cls, path):
+        """
+        :param path: Str; full file path to profile folder
+        :return: Str; name of profile, or empty string if none exists
+        """
+        ancestors, child = os.path.split(path)
+        if ancestors == cls.sound_folder:
+            return child
+        else:
+            return ""
 
     @classmethod
     def save_error(cls, error):

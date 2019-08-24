@@ -16,18 +16,33 @@ def main():
     :return: NoneType
     """
     gui = MasterWindow()
-    gui.all_hourly_sounds = System.load_hourly_sounds()
+    all_sounds = System.load_hourly_sounds()
 
-    if not gui.all_hourly_sounds:
+    if not all_sounds:
         gui.display_fatal_error("Sound files not located. Program will exit.")
     else:
         try:
             settings = System.load_settings()
             gui.set_preferences(settings)
+            gui.all_hourly_sounds = filter_profile_sounds(gui.profile, all_sounds)
         except FileNotFoundError:
             pass
         gui.build()
         gui.run()
+
+
+def filter_profile_sounds(profile, sounds):
+    """
+    Returns relative paths to sounds that are the folder specified by the profile.
+    :param profile: Str
+    :param sounds: List of Str
+    :return: List of Str
+    """
+    if profile:
+        filter_lambda = lambda sound: sound.startswith(profile)
+    else:  # ensure sounds don't belong to another profile
+        filter_lambda = lambda sound: "\\" not in sound
+    return list(filter(filter_lambda, sounds))
 
 
 class MasterWindow:
@@ -46,6 +61,7 @@ class MasterWindow:
 
         self._volume = [20]
         self._minute = ["00"]
+        self._profile = [""]
         self._custom_interval = IntVar()
         self._custom_interval.set(0)
         self._custom_interval_state = IntVar()
@@ -68,6 +84,14 @@ class MasterWindow:
     @minute.setter
     def minute(self, value):
         self._minute[0] = value
+
+    @property
+    def profile(self):
+        return self._profile[0]
+
+    @profile.setter
+    def profile(self, value):
+        self._profile[0] = value
 
     @property
     def custom_interval(self):
@@ -117,6 +141,15 @@ class MasterWindow:
         else:
             return False
 
+    def _ask_string(self, title, prompt, initial):
+        """
+        :param title: Str
+        :param prompt: Str
+        :param initial: Str; the initial string
+        :return: Str
+        """
+        return simpledialog.askstring(title, prompt, initialvalue=initial)
+
     def _warning(self, error, close=False):
         """
         Generalized warning popup
@@ -156,6 +189,7 @@ class MasterWindow:
 
         preferences.add_command(label="Set Volume", command=self.ask_new_volume)
         preferences.add_command(label="Set Minute of the Hour", command=self.ask_new_minute)
+        preferences.add_command(label="Set Profile for Hourlies", command=self.ask_profile)
         preferences.add_command(label="Set Custom Notification", command=self.ask_custom_notification)
         preferences.add_command(label="Toggle Load on Startup", command=self.toggle_startup)
         notify_state.add_command(label="All", command=self.toggle_all_playback)
@@ -205,6 +239,7 @@ class MasterWindow:
         self.minute = settings['minute'].zfill(2)
         self.custom_interval = settings['custom_interval']
         self.custom_interval_state = settings['custom_interval_state']
+        self.profile = System.extract_profile_name(settings['folder'])
 
     def build(self):
         """
@@ -234,6 +269,10 @@ class MasterWindow:
         self._ask_attribute_value(self._minute, "Playback Time", "Set New Minute of the Hour", 0, 58,
                                   updating_minute=True)
 
+    def ask_profile(self):
+        profile = self._ask_string("Change Profile", "Enter Profile Name", self.profile)
+        self.save()
+
     def ask_custom_notification(self):
         """
         :return: NoneType
@@ -251,7 +290,7 @@ class MasterWindow:
         for selection in self._selections:
             selection_values.append(selection.choice)
         default = Selection.DEFAULT_CHOICE
-        System.save_settings(selection_values, default, self.volume, self.minute, self.custom_interval,
+        System.save_settings(selection_values, default, self.volume, self.minute, self.profile, self.custom_interval,
                              self.custom_interval_state)
         messagebox.showinfo("Notice", "Applying settings. Give it few seconds.")
 
@@ -392,7 +431,7 @@ class Selection:
         self._saved_choice = saved_choice
         self._volume = volume
         self._rows_occupied = 3
-        
+
         # Initialize tkinter objects
         self._label = Text(self._root, height=1, width=15, relief="solid", background="#F0F0F0", font="Calibri")
         self._play_button = Button(self._root, text="Play", command=self._play_test, relief="groove",
