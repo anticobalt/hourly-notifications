@@ -24,6 +24,7 @@ class System:
 
     sound_folder = ""
     alt_sound_folder = ""
+    file_types = ["ogg", "mp3", "flac"]
 
     @classmethod
     def _notification_states(cls):
@@ -62,6 +63,17 @@ class System:
             return ""
 
     @classmethod
+    def find_profile_folder(cls, name):
+        """
+        :return: Str
+        """
+        sound_folder = cls.find_sound_folder()
+        if sound_folder:
+            return os.path.join(sound_folder, name)
+        else:
+            return ""
+
+    @classmethod
     def load_hourly_sounds(cls):
         """
         Scan current directory for a sound folder, and scan that sound folder (recursively) for sound files.
@@ -69,7 +81,6 @@ class System:
         :return: List of Str; the relative locations of all hourly sounds
         """
         # Set initial values
-        file_types = ["ogg", "mp3", "flac"]
         sounds = []
         cls.sound_folder = cls.find_sound_folder()
 
@@ -79,9 +90,9 @@ class System:
             for name in folder_contents:
                 path = os.path.join(cls.sound_folder, name)
                 if 'alt' not in name and os.path.isdir(path):
-                    sounds.extend(cls.get_files_recursive(path, file_types))
+                    sounds.extend(cls.get_files_recursive(path, cls.file_types))
                 else:
-                    for extension in file_types:
+                    for extension in cls.file_types:
                         if name.endswith(extension):
                             sounds.append(path)
 
@@ -124,6 +135,69 @@ class System:
             return os.path.join(cls.alt_sound_folder, random.choice(os.listdir(cls.alt_sound_folder)))
         else:
             return ""
+
+    @classmethod
+    def get_profile_sounds(cls, profile):
+        """
+        Get all names of sound files in profile folder, by brute-force matching them to patterns.
+        The patterns are numbers at the end of the extension-less filename that correspond to
+        the hour as a two-digit or four-digit number.
+        NoneType pattern indicates to return the sounds in as-is file order.
+
+        E.g. my_chime-1400.mp3 corresponds to 14:00 (2PM), matching the four-digit pattern;
+        my_chime-14.ogg corresponds to 14:00, matching two-digit pattern.
+
+        :param profile: Str
+        :return: List of Str
+        """
+        sounds = []
+        num_hours = 24
+        patterns = [cls._two_digit_hours(num_hours), cls._four_digit_hours(num_hours), None]
+        parent_path = os.path.join(cls.sound_folder, profile)
+
+        if os.path.isdir(parent_path):
+            try:
+                for pattern in patterns:
+                    while 1:
+                        # look for anything if no pattern i.e. load in file order
+                        looking_for = next(pattern) if pattern else ""
+                        previous_count = len(sounds)
+
+                        for full_name in os.listdir(parent_path):
+                            for file_type in cls.file_types:
+                                name, extension = os.path.splitext(full_name)
+                                if extension == '.' + file_type and name.endswith(looking_for):
+                                    sounds.append(full_name)
+                                    looking_for = next(pattern) if pattern else ""
+                                    previous_count = len(sounds)
+                                    break  # stop checking file type
+
+                        if len(sounds) == num_hours:
+                            return sounds
+
+                        # if not done but elapsed all files with no additions, this pattern is a dud
+                        if len(sounds) == previous_count:
+                            sounds.clear()
+                            break
+
+            except StopIteration:
+                return sounds
+
+        return []
+
+    @classmethod
+    def _two_digit_hours(cls, num_hours):
+        hour = 0
+        while hour < num_hours:
+            yield str(hour).zfill(2)
+            hour += 1
+
+    @classmethod
+    def _four_digit_hours(cls, num_hours):
+        hour = 0
+        while hour < num_hours:
+            yield str(hour).zfill(2) + "00"
+            hour += 1
 
     @classmethod
     def save_settings(cls, values, default, volume, minute, profile, custom_interval, custom_interval_state):

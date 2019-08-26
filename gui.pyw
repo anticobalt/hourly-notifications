@@ -24,9 +24,9 @@ def main():
         try:
             settings = System.load_settings()
             gui.set_preferences(settings)
-            gui.all_hourly_sounds = filter_profile_sounds(gui.profile, all_sounds)
         except FileNotFoundError:
             pass
+        gui.all_hourly_sounds = filter_profile_sounds(gui.profile, all_sounds)
         gui.build()
         gui.run()
 
@@ -39,7 +39,7 @@ def filter_profile_sounds(profile, sounds):
     :return: List of Str
     """
     if profile:
-        filter_lambda = lambda sound: sound.startswith(profile)
+        filter_lambda = lambda sound: sound.startswith(profile + "\\")
     else:  # ensure sounds don't belong to another profile
         filter_lambda = lambda sound: "\\" not in sound
     return list(filter(filter_lambda, sounds))
@@ -189,7 +189,6 @@ class MasterWindow:
 
         preferences.add_command(label="Set Volume", command=self.ask_new_volume)
         preferences.add_command(label="Set Minute of the Hour", command=self.ask_new_minute)
-        preferences.add_command(label="Set Profile for Hourlies", command=self.ask_profile)
         preferences.add_command(label="Set Custom Notification", command=self.ask_custom_notification)
         preferences.add_command(label="Toggle Load on Startup", command=self.toggle_startup)
         notify_state.add_command(label="All", command=self.toggle_all_playback)
@@ -197,9 +196,10 @@ class MasterWindow:
         notify_state.add_command(label="Custom", command=self.toggle_custom_playback)
         help_.add_command(label="Check for Standard Playback Errors", command=self.check_errors)
         help_.add_command(label="Current Notification States", command=self.display_notify_states)
-        help_.add_command(label="About", command=self.display_about)
+        help_.add_command(label="About and Tutorial", command=self.display_about)
 
         self._top_bar.add_cascade(label="Change Preferences", menu=preferences)
+        self._top_bar.add_command(label="Load Profile for Hourlies", command=self.ask_profile)
         self._top_bar.add_command(label="Save Preferences", command=self.save)
         self._top_bar.add_cascade(label="Toggle Notifications", menu=notify_state)
         self._top_bar.add_cascade(label="Help", menu=help_)
@@ -270,8 +270,16 @@ class MasterWindow:
                                   updating_minute=True)
 
     def ask_profile(self):
-        profile = self._ask_string("Change Profile", "Enter Profile Name", self.profile)
-        self.save()
+        self.profile = self._ask_string("Load A Profile", "Enter Profile Name", self.profile)
+        sounds = System.get_profile_sounds(self.profile)
+        if len(sounds) == len(self._selections):
+            for idx, selection in enumerate(self._selections):
+                selection.values = sounds
+                selection.choice = sounds[idx]
+        else:
+            for selection in self._selections:
+                selection.values = []
+                selection.choice = selection.DEFAULT_CHOICE
 
     def ask_custom_notification(self):
         """
@@ -324,17 +332,20 @@ class MasterWindow:
         """
         :return: NoneType
         """
+        settings = System.load_settings()
         player_on = str(System.get_player_on())
         hourly_on = str(System.get_hourlies_on())
         custom_on = str(System.get_customs_on())
-        cu_i = str(System.load_settings()["custom_interval"])
-        cu_is = str(System.load_settings()["custom_interval_state"])
+        cu_i = str(settings["custom_interval"])
+        cu_is = str(settings["custom_interval_state"])
+        folder = settings["folder"]
         messagebox.showinfo("Current States",
                             "Player On: " + player_on + "\n"
                             "Hourly Notifications On: " + hourly_on + "\n"
                             "Custom Notifications On: " + custom_on + "\n"
                             "Custom Interval Length: " + cu_i + "\n"
-                            "Custom Interval State: " + cu_is)
+                            "Custom Interval State: " + cu_is + "\n"
+                            "Notification Source: " + folder)
 
     @staticmethod
     def display_about():
@@ -343,7 +354,8 @@ class MasterWindow:
         """
         messagebox.showinfo("About",
                             "Hourly Notifications (Version: " + CURRENT_PROGRAM_VERSION + ")\n"
-                            "Website: https://github.com/anticobalt/hourly-notifications/")
+                            "Website: https://github.com/anticobalt/hourly-notifications/" + "\n\n"
+                            "See the website for detailed instructions on how to use.")
 
     def toggle_all_playback(self, silent=False):
         """
@@ -406,7 +418,6 @@ class MasterWindow:
 
 
 class Selection:
-
     UNIFORM_PADDING = (10, 10)
     LABEL_PADDING = (10, 0)
     BUTTON_PADDING = (5, 3)
@@ -426,6 +437,7 @@ class Selection:
         self._root = root
         self._hour = hour
         self._minute = minute
+        self._values = sounds
         self._time_column = time_column
         self._time_row = time_row
         self._saved_choice = saved_choice
@@ -437,8 +449,8 @@ class Selection:
         self._play_button = Button(self._root, text="Play", command=self._play_test, relief="groove",
                                    font=("Calibri", 10, "bold"))
         self._choice = StringVar(self._root)
-        self._dropdown = ttk.Combobox(self._root, textvariable=self._choice, values=sounds, font=("Calibri", 12),
-                                      width=10)
+        self._dropdown = ttk.Combobox(self._root, textvariable=self._choice, values=self._values, font=("Calibri", 12),
+                                      width=10, postcommand=self.update)
 
     @property
     def choice(self):
@@ -446,6 +458,25 @@ class Selection:
         :return: Str
         """
         return self._choice.get()
+
+    @choice.setter
+    def choice(self, value):
+        self._choice.set(value)
+
+    @property
+    def values(self):
+        return self._values
+
+    @values.setter
+    def values(self, new_values):
+        self._values = new_values
+
+    def update(self):
+        """
+        Postcommand for Combobox that runs every time before the dropdown is opened.
+        :return:
+        """
+        self._dropdown['values'] = self._values
 
     def _draw_label(self):
         """
@@ -465,7 +496,7 @@ class Selection:
         :return: NoneType
         """
         self._play_button.grid(row=(self._time_row * self._rows_occupied) + 1, column=self._time_column,
-                         padx=Selection.UNIFORM_PADDING, pady=Selection.BUTTON_PADDING)
+                               padx=Selection.UNIFORM_PADDING, pady=Selection.BUTTON_PADDING)
 
     def _draw_dropdown(self):
         """
@@ -484,12 +515,15 @@ class Selection:
         :return: NoneType
         """
         player = Sound()
-        folder = System.find_sound_folder()  # folder exists, otherwise error would've be been thrown at program start
         try:
             settings = System.load_settings()
             volume = settings['volume']
+            folder = System.find_profile_folder(System.extract_profile_name(settings['folder']))
         except FileNotFoundError:
             volume = self._volume
+            # sound folder exists at least, otherwise error would've be been thrown at program start
+            folder = System.find_sound_folder()
+
         if self.choice == Selection.DEFAULT_CHOICE:
             messagebox.showwarning(title="Playback Error", message="No sound set for this time.")
         else:
@@ -579,5 +613,6 @@ class AdvancedPopup:
         """
         self._build_window()
         self._build_elements()
+
 
 main()
