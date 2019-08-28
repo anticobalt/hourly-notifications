@@ -2,6 +2,7 @@
 sound*/
 *.pkl
 *.txt
+*.json
 
 # Pycharm
 .idea/

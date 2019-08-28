@@ -1,5 +1,6 @@
 # The GUI; all preferences are set here
 
+import json
 from tkinter import *
 from tkinter import messagebox, simpledialog
 from tkinter import ttk
@@ -55,6 +56,7 @@ class MasterWindow:
         self.ROW_COUNT = 4
 
         self._root = Tk()
+        self._frame = Frame(self._root)  # For auto-resizing elements
         self._root.title("Hourly Notifications")
         self._selections = []
         self._top_bar = Menu(self._root)
@@ -65,6 +67,8 @@ class MasterWindow:
         self._custom_interval = IntVar()
         self._custom_interval.set(0)
         self._custom_interval_state = IntVar()
+
+        self._config_file_name = "config.json"
 
         self.all_hourly_sounds = []
         self.hourly_sound_choices = dict()
@@ -215,7 +219,7 @@ class MasterWindow:
         hour = 0
         for c in range(self.COLUMN_COUNT):
             for r in range(self.ROW_COUNT):
-                box = Selection(self._root, c, r, hour, self.minute, sounds, saved_choice=saved_choices.get(hour),
+                box = Selection(self._frame, c, r, hour, self.minute, sounds, saved_choice=saved_choices.get(hour),
                                 volume=(self.volume / 100))
                 box.build()
                 hour += 1
@@ -233,6 +237,11 @@ class MasterWindow:
             self.save()
             MasterWindow.save_requested = False
 
+    def _close_window(self):
+        with open(self._config_file_name, 'w') as f:
+            json.dump({'geometry': self._root.geometry()}, f)
+        self._root.destroy()
+
     def set_preferences(self, settings):
         self.hourly_sound_choices = settings['choices']
         self.volume = int(settings['volume'] * 100)
@@ -245,6 +254,20 @@ class MasterWindow:
         """
         :return: NoneType
         """
+        # Make window contents automatically resize with window
+        # https://stackoverflow.com/a/7591453
+        Grid.rowconfigure(self._root, 0, weight=1)
+        Grid.columnconfigure(self._root, 0, weight=1)
+        self._frame.grid(row=0, column=0, sticky=N+S+E+W)
+        self._root.minsize(864, 408)  # default size
+
+        # Try to load previous window geometry
+        try:
+            with open(self._config_file_name, "r") as f:
+                self._root.geometry(json.load(f)['geometry'])
+        except FileNotFoundError:
+            pass
+
         self._draw_top_bar()
         self._create_selections(self.all_hourly_sounds, self.hourly_sound_choices)
 
@@ -252,7 +275,7 @@ class MasterWindow:
         """
         :return: NoneType
         """
-        self._root.resizable(width=False, height=False)
+        self._root.protocol("WM_DELETE_WINDOW", self._close_window)
         self._root.after(1, self._handle_requests)
         self._root.mainloop()
 
@@ -424,9 +447,9 @@ class Selection:
     DROPDOWN_PADDING = (0, 10)
     DEFAULT_CHOICE = "None"
 
-    def __init__(self, root, time_column, time_row, hour, minute, sounds, saved_choice, volume):
+    def __init__(self, frame, time_column, time_row, hour, minute, sounds, saved_choice, volume):
         """
-        :param root: Tk
+        :param frame: Frame
         :param time_column: Int
         :param time_row: Int
         :param hour: Int
@@ -434,7 +457,7 @@ class Selection:
         :param saved_choice: Str or NoneType
         :param volume: Float; for play button
         """
-        self._root = root
+        self._frame = frame
         self._hour = hour
         self._minute = minute
         self._values = sounds
@@ -445,11 +468,11 @@ class Selection:
         self._rows_occupied = 3
 
         # Initialize tkinter objects
-        self._label = Text(self._root, height=1, width=15, relief="solid", background="#F0F0F0", font="Calibri")
-        self._play_button = Button(self._root, text="Play", command=self._play_test, relief="groove",
+        self._label = Text(self._frame, height=1, width=15, relief="solid", background="#F0F0F0", font="Calibri")
+        self._play_button = Button(self._frame, text="Play", command=self._play_test, relief="groove",
                                    font=("Calibri", 10, "bold"))
-        self._choice = StringVar(self._root)
-        self._dropdown = ttk.Combobox(self._root, textvariable=self._choice, values=self._values, font=("Calibri", 12),
+        self._choice = StringVar(self._frame)
+        self._dropdown = ttk.Combobox(self._frame, textvariable=self._choice, values=self._values, font=("Calibri", 12),
                                       width=10, postcommand=self.update)
 
     @property
@@ -488,7 +511,7 @@ class Selection:
 
         # Each row of Selection objects actually has two subrows; Tkinter uses these subrows to draw
         self._label.grid(row=self._time_row * self._rows_occupied, column=self._time_column,
-                         padx=Selection.UNIFORM_PADDING, pady=Selection.LABEL_PADDING)
+                         padx=Selection.UNIFORM_PADDING, pady=Selection.LABEL_PADDING, stick=E+W)
 
     def _draw_play_button(self):
         """
@@ -496,19 +519,24 @@ class Selection:
         :return: NoneType
         """
         self._play_button.grid(row=(self._time_row * self._rows_occupied) + 1, column=self._time_column,
-                               padx=Selection.UNIFORM_PADDING, pady=Selection.BUTTON_PADDING)
+                               padx=Selection.UNIFORM_PADDING, pady=Selection.BUTTON_PADDING, stick=E+W)
 
     def _draw_dropdown(self):
         """
         Draw menu which lets users choose notification for a given time
         :return: NoneType
         """
+        row = (self._time_row * self._rows_occupied) + 2
+
         if self._saved_choice:
             self._choice.set(self._saved_choice)
         else:
             self._choice.set(Selection.DEFAULT_CHOICE)
-        self._dropdown.grid(row=(self._time_row * self._rows_occupied) + 2, column=self._time_column,
-                            padx=Selection.UNIFORM_PADDING, pady=Selection.DROPDOWN_PADDING)
+        self._dropdown.grid(row=row, column=self._time_column,
+                            padx=Selection.UNIFORM_PADDING, pady=Selection.DROPDOWN_PADDING, sticky=N+S+E+W)
+
+        # Make dropdown auto-resize
+        Grid.rowconfigure(self._frame, row, weight=1)
 
     def _play_test(self):
         """
@@ -534,6 +562,10 @@ class Selection:
         """
         :return: NoneType
         """
+        # Make all columns occupied by this Selection automatically resizable
+        # https://stackoverflow.com/a/7591453
+        Grid.columnconfigure(self._frame, self._time_column, weight=1)
+
         self._draw_label()
         self._draw_play_button()
         self._draw_dropdown()
