@@ -485,7 +485,7 @@ class Selection:
                                    font=("Calibri", 10, "bold"))
         self._choice = StringVar(self._frame)
         self._dropdown = ttk.Combobox(self._frame, textvariable=self._choice, values=self._values, font=("Calibri", 12),
-                                      width=10, postcommand=self.update)
+                                      width=10, postcommand=self.update, state="readonly")
 
     @property
     def profile(self):
@@ -523,11 +523,14 @@ class Selection:
 
     def _draw_label(self):
         """
-        Draw text indicating what time's notification can be set in following menu
+        Draw text indicating what time's notification can be set in following menu.
+        Label must be manually made read-only: https://stackoverflow.com/a/3842234
         :return: NoneType
         """
+        self._label.config(state=NORMAL)
         self._label.tag_config('center', justify=CENTER)  # creates a tag with name 'center' that can center text
         self._label.insert(END, "Sound for " + str(self._hour) + ":" + self._minute, 'center')
+        self._label.config(state=DISABLED)
 
         # Each row of Selection objects actually has two subrows; Tkinter uses these subrows to draw
         self._label.grid(row=self._time_row * self._rows_occupied, column=self._time_column,
@@ -596,8 +599,10 @@ class Selection:
         :return: NoneType
         """
         self._minute = minute
+        self._label.config(state=NORMAL)
         self._label.delete(1.0, END)
         self._label.insert(END, "Sound for " + str(self._hour) + ":" + self._minute, 'center')
+        self._label.config(state=DISABLED)
 
 
 class AdvancedPopup:
