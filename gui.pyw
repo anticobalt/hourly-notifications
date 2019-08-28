@@ -27,7 +27,7 @@ def main():
             gui.set_preferences(settings)
         except FileNotFoundError:
             pass
-        gui.all_hourly_sounds = filter_profile_sounds(gui.profile, all_sounds)
+        gui.all_hourly_sounds = filter_profile_sounds(gui.loaded_profile, all_sounds)
         gui.build()
         gui.run()
 
@@ -62,7 +62,7 @@ class MasterWindow:
 
         self._volume = [20]
         self._minute = ["00"]
-        self._profile = [""]
+        self._loaded_profile = [""]
         self._custom_interval = IntVar()
         self._custom_interval.set(0)
         self._custom_interval_state = IntVar()
@@ -89,12 +89,17 @@ class MasterWindow:
         self._minute[0] = value
 
     @property
-    def profile(self):
-        return self._profile[0]
+    def loaded_profile(self):
+        """
+        The profile that is being viewed in the GUI.
+        Not necessarily the same as the one being used by the background player.
+        :return:
+        """
+        return self._loaded_profile[0]
 
-    @profile.setter
-    def profile(self, value):
-        self._profile[0] = value
+    @loaded_profile.setter
+    def loaded_profile(self, value):
+        self._loaded_profile[0] = value
 
     @property
     def custom_interval(self):
@@ -153,17 +158,17 @@ class MasterWindow:
         """
         return simpledialog.askstring(title, prompt, initialvalue=initial)
 
-    def _warning(self, error, close=False):
+    def _warning(self, warning, close=False):
         """
         Generalized warning popup
-        :param error: Str or Tuple
+        :param warning: Str or Tuple
         :param close: Bool
         :return: NoneType
         """
 
-        if type(error) is tuple:
-            error = self._parse_error(error)
-        messagebox.showwarning("Error", error)
+        if type(warning) is tuple:
+            warning = self._parse_error(warning)
+        messagebox.showwarning("Notice", warning)
         if close:
             self._root.destroy()
 
@@ -218,8 +223,8 @@ class MasterWindow:
         hour = 0
         for c in range(self.COLUMN_COUNT):
             for r in range(self.ROW_COUNT):
-                box = Selection(self._frame, c, r, hour, self.minute, sounds, saved_choice=saved_choices.get(hour),
-                                volume=(self.volume / 100))
+                box = Selection(self._frame, c, r, hour, self.minute, self.loaded_profile, sounds,
+                                saved_choice=saved_choices.get(hour), volume=(self.volume / 100))
                 box.build()
                 hour += 1
                 self._selections.append(box)
@@ -247,7 +252,7 @@ class MasterWindow:
         self.minute = settings['minute'].zfill(2)
         self.custom_interval = settings['custom_interval']
         self.custom_interval_state = settings['custom_interval_state']
-        self.profile = System.extract_profile_name(settings['folder'])
+        self.loaded_profile = System.extract_profile_name(settings['folder'])
 
     def build(self):
         """
@@ -292,16 +297,18 @@ class MasterWindow:
                                   updating_minute=True)
 
     def ask_profile(self):
-        self.profile = self._ask_string("Load A Profile", "Enter Profile Name", self.profile)
-        sounds = System.get_profile_sounds(self.profile)
+        self.loaded_profile = self._ask_string("Load A Profile", "Enter Profile Name", self.loaded_profile)
+        sounds = System.get_profile_sounds(self.loaded_profile)
         if len(sounds) == len(self._selections):
             for idx, selection in enumerate(self._selections):
                 selection.values = sounds
                 selection.choice = sounds[idx]
+                selection.profile = self.loaded_profile
         else:
             for selection in self._selections:
                 selection.values = []
                 selection.choice = selection.DEFAULT_CHOICE
+                selection.profile = self.loaded_profile
 
     def ask_custom_notification(self):
         """
@@ -320,8 +327,8 @@ class MasterWindow:
         for selection in self._selections:
             selection_values.append(selection.choice)
         default = Selection.DEFAULT_CHOICE
-        System.save_settings(selection_values, default, self.volume, self.minute, self.profile, self.custom_interval,
-                             self.custom_interval_state)
+        System.save_settings(selection_values, default, self.volume, self.minute, self.loaded_profile,
+                             self.custom_interval, self.custom_interval_state)
         messagebox.showinfo("Notice", "Applying settings. Give it few seconds.")
 
         # Reboot player
@@ -450,12 +457,13 @@ class Selection:
     DROPDOWN_PADDING = (0, 10)
     DEFAULT_CHOICE = "None"
 
-    def __init__(self, frame, time_column, time_row, hour, minute, sounds, saved_choice, volume):
+    def __init__(self, frame, time_column, time_row, hour, minute, profile, sounds, saved_choice, volume):
         """
         :param frame: Frame
         :param time_column: Int
         :param time_row: Int
         :param hour: Int
+        :param profile: Str
         :param sounds: List
         :param saved_choice: Str or NoneType
         :param volume: Float; for play button
@@ -463,6 +471,7 @@ class Selection:
         self._frame = frame
         self._hour = hour
         self._minute = minute
+        self._profile = profile
         self._values = sounds
         self._time_column = time_column
         self._time_row = time_row
@@ -477,6 +486,14 @@ class Selection:
         self._choice = StringVar(self._frame)
         self._dropdown = ttk.Combobox(self._frame, textvariable=self._choice, values=self._values, font=("Calibri", 12),
                                       width=10, postcommand=self.update)
+
+    @property
+    def profile(self):
+        return self._profile
+
+    @profile.setter
+    def profile(self, value):
+        self._profile = value
 
     @property
     def choice(self):
@@ -549,7 +566,7 @@ class Selection:
         try:
             settings = System.load_settings()
             volume = settings['volume']
-            folder = System.find_profile_folder(System.extract_profile_name(settings['folder']))
+            folder = System.find_profile_folder(self.profile)
         except FileNotFoundError:
             volume = self._volume
             # sound folder exists at least, otherwise error would've be been thrown at program start
