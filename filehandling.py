@@ -10,7 +10,6 @@ CURRENT_PROGRAM_VERSION = "Frivolity"
 
 
 class System:
-
     CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
     SETTINGS_FILE = os.path.join(CURRENT_DIR, "settings.pkl")
     BACKUP_SETTINGS_FILE = os.path.join(CURRENT_DIR, "settings_backup.pkl")
@@ -398,7 +397,7 @@ class System:
             # Affinity
             with open(os.path.join(cls.CURRENT_DIR, "soundsettings.pkl"), "rb") as f:
                 sound_folder, sound_choices, volume = pickle.load(f)
-            with open(os.path.join(cls.CURRENT_DIR,"timesettings.pkl"), "rb") as f:
+            with open(os.path.join(cls.CURRENT_DIR, "timesettings.pkl"), "rb") as f:
                 minute = pickle.load(f)
             settings = dict(version=CURRENT_PROGRAM_VERSION, folder=sound_folder, choices=sound_choices, volume=volume,
                             minute=minute, custom_interval=0, custom_interval_state=0)

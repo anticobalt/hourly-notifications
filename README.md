@@ -17,6 +17,7 @@ Tested on Windows 10 (probably works on 7/8). Requires Python3.
 1. `pip install -r requirements.txt`
 2. In the program's folder, make a folder named 'sounds'. This new folder should contain sounds you want to use.
 3. In the 'sounds' folder, create a folder called 'alt' and put as many sound files for the custom alarm in here as you want. When it is time for the alarm to sound, a random file will be chosen to play.
+4. Open `gui.pyw` with Python3 to manage and turn notifications on/off
 
 ### Advanced Usage: Profiles
 -  Make a subfolder inside the 'sounds' folder to add a set of files for a profile. Active profile can be set by name in the GUI, where the name is the name of the folder.

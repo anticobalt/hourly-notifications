@@ -47,7 +47,6 @@ def filter_profile_sounds(profile, sounds):
 
 
 class MasterWindow:
-
     save_requested = False
 
     def __init__(self):
@@ -258,7 +257,7 @@ class MasterWindow:
         # https://stackoverflow.com/a/7591453
         Grid.rowconfigure(self._root, 0, weight=1)
         Grid.columnconfigure(self._root, 0, weight=1)
-        self._frame.grid(row=0, column=0, sticky=N+S+E+W)
+        self._frame.grid(row=0, column=0, sticky=N + S + E + W)
         self._root.minsize(864, 408)  # default size
 
         # Try to load previous window geometry
@@ -362,23 +361,27 @@ class MasterWindow:
         cu_i = str(settings["custom_interval"])
         cu_is = str(settings["custom_interval_state"])
         folder = settings["folder"]
-        messagebox.showinfo("Current States",
-                            "Player On: " + player_on + "\n"
-                            "Hourly Notifications On: " + hourly_on + "\n"
-                            "Custom Notifications On: " + custom_on + "\n"
-                            "Custom Interval Length: " + cu_i + "\n"
-                            "Custom Interval State: " + cu_is + "\n"
-                            "Notification Source: " + folder)
+        messagebox.showinfo(
+            "Current States",
+            "Player On: " + player_on +
+            "\nHourly Notifications On: " + hourly_on +
+            "\nCustom Notifications On: " + custom_on +
+            "\nCustom Interval Length: " + cu_i +
+            "\nCustom Interval State: " + cu_is +
+            "\nNotification Source: " + folder
+        )
 
     @staticmethod
     def display_about():
         """
         :return: NoneType
         """
-        messagebox.showinfo("About",
-                            "Hourly Notifications (Version: " + CURRENT_PROGRAM_VERSION + ")\n"
-                            "Website: https://github.com/anticobalt/hourly-notifications/" + "\n\n"
-                            "See the website for detailed instructions on how to use.")
+        messagebox.showinfo(
+            "About",
+            "Hourly Notifications (Version: " + CURRENT_PROGRAM_VERSION + ")" +
+            "\nWebsite: https://github.com/anticobalt/hourly-notifications/" +
+            "\n\nSee the website for detailed instructions on how to use."
+            )
 
     def toggle_all_playback(self, silent=False):
         """
@@ -436,7 +439,7 @@ class MasterWindow:
                   "To enable auto-startup, right-click player.pyw in the original program folder to create a " \
                   "shortcut, and move that shortcut into the startup folder that just opened. \n" \
                   "To disable auto-startup, delete the player.pyw shortcut from startup folder."
-        messagebox.showinfo("Enable/Disable Auto-Startup of HourlyNotifications", message)
+        messagebox.showinfo("Enable/Disable Auto-Startup of Hourly Notifications", message)
         System.open_startup_folder()
 
 
@@ -511,7 +514,7 @@ class Selection:
 
         # Each row of Selection objects actually has two subrows; Tkinter uses these subrows to draw
         self._label.grid(row=self._time_row * self._rows_occupied, column=self._time_column,
-                         padx=Selection.UNIFORM_PADDING, pady=Selection.LABEL_PADDING, stick=E+W)
+                         padx=Selection.UNIFORM_PADDING, pady=Selection.LABEL_PADDING, stick=E + W)
 
     def _draw_play_button(self):
         """
@@ -519,7 +522,7 @@ class Selection:
         :return: NoneType
         """
         self._play_button.grid(row=(self._time_row * self._rows_occupied) + 1, column=self._time_column,
-                               padx=Selection.UNIFORM_PADDING, pady=Selection.BUTTON_PADDING, stick=E+W)
+                               padx=Selection.UNIFORM_PADDING, pady=Selection.BUTTON_PADDING, stick=E + W)
 
     def _draw_dropdown(self):
         """
@@ -533,7 +536,7 @@ class Selection:
         else:
             self._choice.set(Selection.DEFAULT_CHOICE)
         self._dropdown.grid(row=row, column=self._time_column,
-                            padx=Selection.UNIFORM_PADDING, pady=Selection.DROPDOWN_PADDING, sticky=N+S+E+W)
+                            padx=Selection.UNIFORM_PADDING, pady=Selection.DROPDOWN_PADDING, sticky=N + S + E + W)
 
         # Make dropdown auto-resize
         Grid.rowconfigure(self._frame, row, weight=1)

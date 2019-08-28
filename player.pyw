@@ -39,7 +39,7 @@ class Sound:
 
     def run(self):
         while 1:
-        
+
             self.log = []
             try:
                 self.decide_play_hourly()
@@ -53,10 +53,10 @@ class Sound:
                 exc_type, exc_value, exc_traceback = sys.exc_info()
                 exception = traceback.format_exception(exc_type, exc_value, exc_traceback)
                 System.write_log("".join(exception))
-            
+
             if self.log:
                 System.write_log("\n".join(self.log))
-            
+
             for i in range(self.run_delay):
                 time.sleep(1)
                 if System.get_player_on() is False:
@@ -77,7 +77,7 @@ class Sound:
         # self.log.append(str(system_time))
 
         for hour in range(24):
-            if (self.hour_last_played != hour) and (t(hour, minute) <= system_time <= t(hour, minute+1)):
+            if (self.hour_last_played != hour) and (t(hour, minute) <= system_time <= t(hour, minute + 1)):
                 # play sound if sound has not been played in the last hour, and it is the appropriate time
                 try:
                     file_name = self.settings['choices'][hour]
@@ -121,14 +121,17 @@ class Sound:
             else:
                 self.log.append("No alt sounds found.")
 
-        self.log.append(str((ctime - self.interval_start_time)/60) + " minutes since alt sound playback cycle "
-                        "started. Time is " + str(d.now().time()) + ". Interval is " + str(self.interval) + ".")
+        self.log.append(
+            str((ctime - self.interval_start_time) / 60) + " minutes since alt sound playback cycle " +
+            "started. Time is " + str(d.now().time()) + ". Interval is " + str(self.interval) + "."
+        )
         self.last_handled_time = ctime
 
     """
     Plays sound with PyGame.
     Do NOT initialize PyGame directly, only initialize the mixer, or the sound will not play.
     """
+
     def play_sound(self, file):
         """
         :param file: Str
