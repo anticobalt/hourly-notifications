@@ -157,18 +157,16 @@ class System:
         if os.path.isdir(parent_path):
             try:
                 for pattern in patterns:
+                    # look for anything if no pattern i.e. load in file order
+                    looking_for = next(pattern) if pattern else ""
                     while 1:
-                        # look for anything if no pattern i.e. load in file order
-                        looking_for = next(pattern) if pattern else ""
                         previous_count = len(sounds)
-
                         for full_name in os.listdir(parent_path):
                             for file_type in cls.file_types:
                                 name, extension = os.path.splitext(full_name)
                                 if extension == '.' + file_type and name.endswith(looking_for):
                                     sounds.append(full_name)
                                     looking_for = next(pattern) if pattern else ""
-                                    previous_count = len(sounds)
                                     break  # stop checking file type
 
                         if len(sounds) == num_hours:

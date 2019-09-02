@@ -297,7 +297,8 @@ class MasterWindow:
                                   updating_minute=True)
 
     def ask_profile(self):
-        self.loaded_profile = self._ask_string("Load A Profile", "Enter Profile Name", self.loaded_profile)
+        response = self._ask_string("Load A Profile", "Enter Profile Name", self.loaded_profile)
+        self.loaded_profile = response if response else self.loaded_profile
         sounds = System.get_profile_sounds(self.loaded_profile)
         if len(sounds) == len(self._selections):
             for idx, selection in enumerate(self._selections):
